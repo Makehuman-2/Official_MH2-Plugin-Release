@@ -1,0 +1,10 @@
+[project]
+name = "mh2_official_tools"
+version = "2.0.0"
+dependencies = ["PySide6"]
+
+[project.entry-points."makehuman2.plugins"]
+prop_panel = "mh2_official_tools.prop_panel:initialize_extension"
+# THE SYSTEM ALIGNMENT CURE
+# This registers your outfit studio directly into your custom official entry points loop!
+make_outfit = "mh2_official_tools.make_outfit:initialize_extension"

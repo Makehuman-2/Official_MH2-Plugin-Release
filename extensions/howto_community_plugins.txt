@@ -1,0 +1,8 @@
+makehuman2/
+└── extensions/
+    ├── custom_shoes_mod/      <-- Folder named for the plugin
+    │   ├── main.py            <-- The main script your app loads
+    │   └── texture.png        <-- Extra mod files stay organized here
+    │
+    └── extra_hair_mod/
+        └── main.py

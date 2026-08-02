@@ -1,0 +1,11 @@
+makehuman2/
+├── mainwindow.py        <-- Main UI file (contains your injection hook)
+├── plugin_panel.py      <-- The hybrid backup panel file we built
+├── pyproject.toml       <-- Registers your official features to Python
+│
+├── extensions/          <-- LEAVE THIS EMPTY (Only for community drop-ins)
+│
+└── mh2_official_tools/  <-- YOUR CORE PLUGIN FOLDER (Put dev tools here!)
+    ├── __init__.py      <-- Blank file
+    ├── tool_alpha.py    <-- Developer plugin 1
+    └── tool_beta.py     <-- Developer plugin 2

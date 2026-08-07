@@ -6,3 +6,5 @@ The new plugin panel release for Makehuman 2. The Makehuman 2 code-base of the d
 This includes fantasy patch, and base legacy mh2, however does not include plugins themselves at present. The official will be added here in due course. The community plugins/addons will be uploaded on their own repos Thank you for your understanding!
 
 This is a work in progress. If you need an officially supported current version of MH2 please grab one from the Makehuman 2 official git. Legacy and Fantasy both are available at present, Elv
+
+For now plugins can be found here for testing purposes! https://github.com/stars/Licentyius/lists/elvs-mh2-extensions

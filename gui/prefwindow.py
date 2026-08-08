@@ -228,6 +228,22 @@ class MHPrefWindow(QWidget):
         sess.setLayout(se_layout)
         layout.addWidget(sess)
 
+        # Clock ---
+        timer_box = QGroupBox("Health & Immersive Breaks")
+        timer_box.setObjectName("subwindow")
+        t_layout = QHBoxLayout()
+        t_layout.addWidget(QLabel("Break Reminder Interval (Minutes):"))
+        
+        self.timerInput = QLineEdit()
+        self.timerInput.setPlaceholderText("e.g. 120")
+        self.timerInput.setFixedWidth(60)
+        self.timerInput.setText(str(env.session.get("play_timer_minutes", 120)))
+        self.timerInput.editingFinished.connect(self.save_timer_preference)
+        
+        t_layout.addWidget(self.timerInput)
+        t_layout.addStretch()
+        timer_box.setLayout(t_layout)
+        layout.addWidget(timer_box)
 
     def initKeyTab(self, keytab):
         layout = QVBoxLayout(keytab)
@@ -417,4 +433,25 @@ class MHPrefWindow(QWidget):
                 "No Cache Found",
                 "The cache paths are already clean or could not be detected.\n" + "\n".join(errors)
             )
-    
+
+    def save_timer_preference(self):
+        """Validates the input minutes, saves to makehuman2.conf via saveSession, and live updates the engine."""
+        env = self.parent.env
+        try:
+            minutes = int(self.timerInput.text().strip())
+            if minutes < 1:
+                minutes = 1  # Rigid safety barrier floor limit parameter
+        except ValueError:
+            minutes = 120    # Gracefully restore default fallback if corrupted
+            self.timerInput.setText("120")
+            
+        env.session["play_timer_minutes"] = minutes
+        
+        if hasattr(env, 'saveSession'):
+            env.saveSession()
+        
+        # Dynamically push updates to the active running engine layout without needing an app restart
+        if hasattr(self.parent, 'play_timer_engine') and self.parent.play_timer_engine:
+            if hasattr(self.parent.play_timer_engine, 'update_target_limit'):
+                self.parent.play_timer_engine.update_target_limit(minutes)
+

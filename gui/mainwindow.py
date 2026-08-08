@@ -49,7 +49,6 @@ class MHMainWindow(QMainWindow):
     Main Window class
     """
     def __init__(self, glob):
-        # RESTORED OLD ORIGINAL ORDER: No super() at line 1!
         self.env = glob.env
         env = glob.env
         self.glob = glob
@@ -148,40 +147,18 @@ class MHMainWindow(QMainWindow):
         # ========================================================
         # IMMERSIVE PLAY BREAK CLOCK & ACCUMULATING ALARM ENGINE
         # ========================================================
-        self.seconds_elapsed = 0
-        self.total_minutes_elapsed = 0  # Tracks continuous accumulated session timeline time
-        self.reminder_fired = False
 
         # Initialize and anchor our custom interactive widget row right onto the top menu bar corner area
-        from gui.playtimer import MHPlayTimer
         self.play_timer_engine = MHPlayTimer(self)
         
         menu_bar = self.menuBar()
-        if menu_bar is not None:
-            menu_bar.setCornerWidget(self.play_timer_engine, Qt.Corner.TopRightCorner)
+        menu_bar.setCornerWidget(self.play_timer_engine, Qt.Corner.TopRightCorner)
 
-        def play_timer_tick():
-            self.seconds_elapsed += 1
-            
-            # Read chosen custom tracking minutes live from configuration definitions memory
-            chosen_minutes = self.env.session.get("play_timer_minutes", 120)
-            target_seconds_limit = int(chosen_minutes * 60)
-            
-            # Flag a background timer event when active limit frames are crossed
-            if self.seconds_elapsed >= target_seconds_limit and not self.reminder_fired:
-                self.reminder_fired = True
-
-        # Simple continuous background ticker thread container bound to the application window process
-        self.session_clock = QTimer(self)
-        self.session_clock.timeout.connect(play_timer_tick)
-        self.session_clock.start(1000) # Fires precisely every 1 second
         # ========================================================
 
         s = env.session["mainwinsize"]
         self.resize(s["w"], s["h"])
        
-        menu_bar = self.menuBar()
-
         about_menu = menu_bar.addMenu(QIcon(os.path.join(env.path_sysicon, "makehuman.png")), "&About")
         self.addActCallBack(about_menu, "Info", self.info_call)
 

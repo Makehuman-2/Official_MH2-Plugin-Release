@@ -8,6 +8,7 @@
 import os
 import sys
 import importlib.util
+from types import SimpleNamespace
 from importlib.metadata import entry_points
 from PySide6 import QtWidgets, QtCore
 
@@ -20,36 +21,25 @@ class CommunityPanel(QtWidgets.QWidget):
         super().__init__(parent)
         self.app = app_reference
         self.glob = glob_reference
+        self.env = self.glob.env
+        self.last_error = None
         
         # Tracking dictionaries for both architectures
         self.registered_official = {}    # Holds the official TOML entry points
         self.registered_community = {}   # Holds the raw community .py files
         self.active_extensions = {}      # Tracks currently active modules
         self.checkboxes = {}             # Tracks visible UI toggles
-        
-        # Steam & PyInstaller Safe Paths
-        current_script_dir = os.path.dirname(os.path.abspath(__file__))
-        # Steam & PyInstaller Safe Paths
-        if getattr(sys, 'frozen', False):
-            # Points to the root directory where makehuman.exe sits
-            base_dir = os.path.dirname(sys.executable)
-            # Use sys._MEIPASS or base_dir to anchor internal scripts
-            self.internal_dir = getattr(sys, '_MEIPASS', base_dir)
-        else:
-            base_dir = os.path.abspath(os.getcwd())
-            self.internal_dir = os.path.dirname(os.path.abspath(__file__))
-            
-        self.extensions_dir = os.path.join(base_dir, 'extensions')
 
-        
+        self.extensions_dir = os.path.join(self.env.path_sys, 'extensions')
+        self.userext_dir = os.path.join(self.env.path_home, 'extensions')
+
         # Build the user interface frame
         self.init_ui()
         
         # Isolated Sequential Execution (Non-Parallel Safe Loading)
-        try:
-            self.load_all_extensions_sequential()
-        except Exception as startup_fault:
-            print(f"[Extensions Rescue] System initialization issue: {startup_fault}")
+        err = self.load_all_extensions_sequential()
+        if err is False:
+            self.env.logLine(1, self.last_error)
 
     def init_ui(self):
         """Constructs a clean scroll interface separating official and mod components."""
@@ -85,31 +75,34 @@ class CommunityPanel(QtWidgets.QWidget):
         """Runs discovery pipelines across official, local core, and community folders."""
         os.makedirs(self.extensions_dir, exist_ok=True)
         
-        try:
-            self.discover_official_plugins()
-        except Exception as official_error:
-            print(f"[MH2 Error] Official entry points pipeline halted: {official_error}")
-            
-        try:
-            # FIXED: Look next to makehuman.exe when packaged, not inside python's internal zip files
-            if getattr(sys, 'frozen', False):
-                base_folder = os.path.dirname(sys.executable)
-            else:
-                base_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        err = self.discover_official_plugins()
+        if err is False:
+            self.env.logLine(1, "Official entry points pipeline skipped, error:")
+            self.env.logLine(1, self.last_error)
+        else:
+            try:
+                # FIXED: Look next to makehuman.exe when packaged, not inside python's internal zip files
+                if getattr(sys, 'frozen', False):
+                    base_folder = os.path.dirname(sys.executable)
+                else:
+                    base_folder = self.env.path_sys
+                #
+                # TODO: self.env.path_sys should work for both, need to test with pyinstaller still
                 
-            core_tools_dir = os.path.join(base_folder, 'mh2_official_tools')
-            if os.path.exists(core_tools_dir):
-                original_extensions_dir = self.extensions_dir
-                self.extensions_dir = core_tools_dir
-                self.discover_community_extensions()
-                self.extensions_dir = original_extensions_dir
-        except Exception as core_scan_error:
-            print(f"[MH2 Error] Core tools directory scan failed: {core_scan_error}")
+                core_tools_dir = os.path.join(base_folder, 'mh2_official_tools')
+                if os.path.exists(core_tools_dir):
+                    self.discover_extensions(core_tools_dir)
+            except Exception as core_scan_error:
+                self.last_error = f"Core tools directory scan failed: {core_scan_error}"
+                return False
 
-        try:
-            self.discover_community_extensions()
-        except Exception as community_error:
-            print(f"[MH2 Error] Community directory pipeline halted: {community_error}")
+        for extdir in (self.extensions_dir, self.userext_dir):
+            try:
+                self.discover_extensions(extdir)   # community
+            except Exception as community_error:
+                self.last_error = f"Community directory pipeline halted: {community_error}"
+                return False
+        return True
 
 
     # =========================================================================
@@ -122,14 +115,16 @@ class CommunityPanel(QtWidgets.QWidget):
         If not installed via pip, it parses the local pyproject.toml automatically
         so it works instantly for all users out-of-the-box.
         """
-        from importlib.metadata import entry_points
-        import importlib
-        
-        # 1. First run a standard metadata query pass 
-        discovered = list(entry_points(group='makehuman2.plugins'))
-        
+        # 1. First run a standard metadata query pass, group is known since python3.10
+        #
+        if sys.version_info < (3, 10):
+            discovered = list(entry_points().get('makehuman2.plugins', []))
+        else:
+            discovered = list(entry_points(group='makehuman2.plugins'))
+
         # 2. LOCAL TOML BACKUP FALLBACK ROUTINE
         # If no installed packages are found, read directly from the project root folder
+
         if not discovered:
             try:
                 import tomllib  # Built-in python 3.11+
@@ -137,41 +132,44 @@ class CommunityPanel(QtWidgets.QWidget):
                 try:
                     import toml as tomllib # Fallback for python < 3.11
                 except ImportError:
-                    tomllib = None
+                    self.last_error = "No toml-Library available for python < 3.11"
+                    return False
 
-            if tomllib:
-                # Travel up to target your root configuration file location
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                toml_path = os.path.join(os.path.dirname(current_dir), 'pyproject.toml')
+            # Travel up to target your root configuration file location
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            toml_path = os.path.join(os.path.dirname(current_dir), 'pyproject.toml')
                 
-                # Check alternative local structural paths if needed
-                if not os.path.exists(toml_path):
-                    toml_path = os.path.join(current_dir, 'pyproject.toml')
+            # Check alternative local structural paths if needed
+            if not os.path.exists(toml_path):
+                toml_path = os.path.join(current_dir, 'pyproject.toml')
 
-                if os.path.exists(toml_path):
-                    with open(toml_path, "rb") as f:
+            if os.path.exists(toml_path):
+                try:
+                    with open(toml_path, "r") as f:
                         toml_data = tomllib.load(f)
+                except Exception as error:
+                    self.last_error = "Error while reading " + toml_path + ": " + str(error)
+                    return False
+
+                # Dig through your exact formatting nodes to find registered extensions
+                entry_points_block = (toml_data.get("project", {})
+                                     .get("entry-points", {})
+                                     .get("makehuman2.plugins", {}))
+
+                # Reconstruct mock entry point objects to sync with your loader mechanics 
+                for name, value in entry_points_block.items():
+                    module_path, func_name = value.split(":")
                     
-                    # Dig through your exact formatting nodes to find registered extensions
-                    entry_points_block = (toml_data.get("project", {})
-                                         .get("entry-points", {})
-                                         .get("makehuman2.plugins", {}))
-                    
-                    # Reconstruct mock entry point objects to sync with your loader mechanics 
-                    from types import SimpleNamespace
-                    for name, value in entry_points_block.items():
-                        module_path, func_name = value.split(":")
-                        
-                        def local_load(m_path=module_path, f_name=func_name):
-                            mod = importlib.import_module(m_path)
-                            return getattr(mod, f_name)
+                    def local_load(m_path=module_path, f_name=func_name):
+                        mod = importlib.import_module(m_path)
+                        return getattr(mod, f_name)
                             
-                        mock_ep = SimpleNamespace(
-                            name=name,
-                            value=value,
-                            load=local_load
-                        )
-                        discovered.append(mock_ep)
+                    mock_ep = SimpleNamespace(
+                        name=name,
+                        value=value,
+                        load=local_load
+                    )
+                    discovered.append(mock_ep)
 
         # 3. CONSTRUCT WIDGET CHECKBOXES 
         has_official = False
@@ -190,6 +188,8 @@ class CommunityPanel(QtWidgets.QWidget):
                 toggle_callback=lambda state, target_ep=ep, name_id=plugin_name: self.toggle_official(target_ep, name_id, state)
             )
 
+        return True
+
     def toggle_official(self, entry_point, name, state):
         """Loads official code modules into memory when enabled."""
         if state == 2 or state == QtCore.Qt.Checked:
@@ -198,34 +198,36 @@ class CommunityPanel(QtWidgets.QWidget):
                 res = init_func(self.app, self.glob)
                 if res:
                     self.active_extensions[name] = res
-                print(f"[MH2 Engine] Core Extension Hooked: {name}")
+                self.env.logLine(1, f"Core Extension Hooked: {name}")
             except Exception as e:
-                print(f"[MH2 Engine Error] Core feature execution failure on {name}: {e}")
+                self.env.logLine(1, f"Error, core feature execution failure on {name}: {e}")
         else:
             self.active_extensions.pop(name, None)
 
     # =========================================================================
     # PIPELINE 2: Dynamic User Directory (Community Drop-ins)
     # =========================================================================
-    def discover_community_extensions(self):
+    def discover_extensions(self, extdir):
         """
         Smart Hybrid Scanner: Finds loose .py files (like the lighting extension)
         AND checks inside subfolders for a script.
         """
-        if not os.path.exists(self.extensions_dir):
+        self.env.logLine(2, "discover_extensions in " + extdir)
+        if not os.path.exists(extdir):
             return
             
-        items = os.listdir(self.extensions_dir)
-        has_community = False
+        items = os.listdir(extdir)
+        has_extension = False
         
-        if self.extensions_dir not in sys.path:
-            sys.path.append(self.extensions_dir)
+        if extdir not in sys.path:
+            sys.path.append(extdir)
             
+
         for item in items:
             if item.startswith("__"):
                 continue
                 
-            path_target = os.path.join(self.extensions_dir, item)
+            path_target = os.path.join(extdir, item)
             file_path = None
             raw_module_name = ""
             
@@ -235,6 +237,7 @@ class CommunityPanel(QtWidgets.QWidget):
                 for possible_name in ["main.py", f"{item}.py"]:
                     check_path = os.path.join(path_target, possible_name)
                     if os.path.exists(check_path):
+                        self.env.logLine(2, "plugin search, found " + check_path)
                         file_path = check_path
                         raw_module_name = item
                         if path_target not in sys.path:
@@ -242,15 +245,16 @@ class CommunityPanel(QtWidgets.QWidget):
                         break
 
             # STYLE B: If it's a raw loose file (like your original DNA script)
-            elif os.path.isfile(path_target) and item.endswith(".py") and item != "plugin_panel.py":
+            elif os.path.isfile(path_target) and item.endswith(".py"):
+                self.env.logLine(2, "plugin search, found " + item)
                 file_path = path_target
                 raw_module_name = item[:-3]
 
             # If we successfully located a valid python execution script, mount it
             if file_path and raw_module_name:
-                if not has_community:
+                if not has_extension:
                     self.add_section_header("Community Extensions")
-                    has_community = True
+                    has_extension = True
                     
                 unique_sys_key = f"mh2_mod_{raw_module_name}"
                 internal_id = f"community_{raw_module_name}"
@@ -270,9 +274,11 @@ class CommunityPanel(QtWidgets.QWidget):
                         display_name=raw_module_name.replace('_', ' ').title(),
                         toggle_callback=lambda state, name_id=internal_id: self.toggle_community(name_id, state)
                     )
-                    print(f"[MH2 Extensions Engine] Successfully loaded community plugin: {raw_module_name}")
+                    self.env.logLine(1, f"Successfully loaded plugin: {raw_module_name}")
                 except Exception as e:
-                    print(f"[MH2 Extensions Error] Failed compiling script path {raw_module_name}: {e}")
+                    self.last_error = f"Failed compiling script path {raw_module_name}: {e}"
+                    return False
+        return True
 
     def toggle_community(self, name, state):
         """Runs the load/unload methods inside loose user scripts."""
@@ -289,7 +295,7 @@ class CommunityPanel(QtWidgets.QWidget):
                             self.active_extensions[name] = res
                         break
                     except Exception as e:
-                        print(f"[Mod Crash] Active hook error inside {name}: {e}")
+                        self.env.logLine(1, f"module crash, active hook error inside {name}: {e}")
         else:
             for hook_name in ["unload_extension", "shutdown_extension"]:
                 if hasattr(module, hook_name):
@@ -297,7 +303,7 @@ class CommunityPanel(QtWidgets.QWidget):
                         getattr(module, hook_name)()
                         break
                     except Exception as e:
-                        print(f"[Mod Cleanup Error] Trace failure on {name}: {e}")
+                        self.env.logLine(1, f"module cleanup, trace failure on {name}: {e}")
             self.active_extensions.pop(name, None)
 
     # =========================================================================
@@ -321,10 +327,9 @@ class CommunityPanel(QtWidgets.QWidget):
         Clears visible checkbox frames, unloads cached memory modules, 
         and re-runs your discovery pipeline live for fresh downloads.
         """
-        print("\n[MH2 Refresh] Flushing compiled python script caches...")
+        self.env.logLine(1, "Refresh: Flushing compiled python script caches...")
         
         # 1. Force python to forget cached files so updates read fresh from disk
-        import sys
         for internal_id in list(self.registered_community.keys()):
             raw_name = internal_id.replace("community_", "")
             unique_sys_key = f"mh2_mod_{raw_name}"
@@ -347,4 +352,5 @@ class CommunityPanel(QtWidgets.QWidget):
         # 4. Process event ticks to clear UI memory blocks and re-run your scanning methods
         QtCore.QCoreApplication.processEvents()
         self.load_all_extensions_sequential()
-        print("[MH2 Refresh] Hot-refresh complete. New folders mapped successfully.\n")
+        self.env.logLine(1, "Refresh: Hot-refresh complete. New folders mapped successfully.")
+        

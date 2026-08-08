@@ -13,11 +13,14 @@ from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QPushBu
 from PySide6.QtGui import QIcon
 
 class MHPlayAlert(QDialog):
+    """A completely borderless, theme-compliant dialog window that completely erases OS blue buttons."""
     def __init__(self, parent, custom_minutes, total_minutes):
         super().__init__(parent)
         
+        # Destroys the locked Windows title bar completely to kill the blue color
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         
+        # Enforces your exact dark charcoal (#2b2b2b) and glowing orange border themes cleanly
         self.setStyleSheet(
             "QDialog { background-color: #2b2b2b; border: 3px solid #f69038; border-radius: 8px; }"
             "QLabel { color: #ffffff; font-family: 'Segoe UI'; font-size: 12px; margin-top: 2px; background: transparent; }"
@@ -29,7 +32,7 @@ class MHPlayAlert(QDialog):
         master_layout.setContentsMargins(0, 0, 0, 0)
         master_layout.setSpacing(0)
         
-        # 1. CUSTOM THEME HEADER BAR
+        # 1. OUR CUSTOM THEME HEADER BAR
         custom_header = QWidget()
         custom_header.setStyleSheet("background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #f69038, stop:1 #323232); border-top-left-radius: 5px; border-top-right-radius: 5px;")
         header_layout = QHBoxLayout(custom_header)
@@ -51,7 +54,7 @@ class MHPlayAlert(QDialog):
         text_lbl = QLabel(
             f"<h3>You have been creating for a total of {total_minutes} minutes!</h3>"
             f"<p>To stay fresh and prevent creative eye strain, it is highly recommended to take a short break ⏱️.</p>"
-            f"<b>Please remember to save your active character modifications before closing MH2 💾!</b>"
+            f"<b>Please remember to save your active character modifications before closing MH2!</b>"
         )
         text_lbl.setWordWrap(True)
         content_layout.addWidget(text_lbl)
@@ -83,31 +86,38 @@ class MHPlayTimer(QWidget):
         super().__init__(parent)
         self.parent = parent
         self.env = parent.env if hasattr(parent, 'env') else None
-        self.icon_dir = os.path.join("data", "icons")
+        self.icon_dir = self.env.path_sysicon 
+
+        self.seconds_elapsed = 0
+        self.total_minutes_elapsed = 0  # Tracks continuous accumulated session timeline time
+        self.reminder_fired = False
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(5, 0, 5, 0)
         layout.setSpacing(4)
 
         # 1. The Clickable Time Ticker Label Component
-        self.timeLabel = QLabel("Session: 00:00:00")
+        self.timeLabStyleOn = "font-family: 'Segoe UI', monospace; font-size: 11px; color: #ffffff; font-weight: bold; background: transparent; margin-top: 0px; padding: 0px 4px;"
+        self.timeLabStyleOff= "font-family: 'Segoe UI', monospace; font-size: 11px; color: #777777; font-weight: bold; background: transparent; margin-top: 0px; padding: 0px 4px;"
+        self.timeLabel = QLabel("Session: 00:00:00 (paused)")
+        self.timeLabel.setStyleSheet(self.timeLabStyleOn)
         self.timeLabel.setToolTip("Click to change break reminder interval!")
         self.timeLabel.mousePressEvent = self.label_clicked_event
         layout.addWidget(self.timeLabel)
 
-        # 2. ON-SCREEN PLAY BUTTON
+        # 2. THEME-RESPECTANT ON-SCREEN PLAY BUTTON
         self.playBtn = QPushButton()
         layout.addWidget(self.playBtn)
 
-        # 3. ON-SCREEN PAUSE BUTTON
+        # 3. THEME-RESPECTANT ON-SCREEN PAUSE BUTTON
         self.pauseBtn = QPushButton()
         layout.addWidget(self.pauseBtn)
 
-        # 4. ON-SCREEN STOP / RESET BUTTON
+        # 4. THEME-RESPECTANT ON-SCREEN STOP / RESET BUTTON
         self.stopBtn = QPushButton()
         layout.addWidget(self.stopBtn)
 
-        # CRITICAL CONNECTIONS: Explicitly wires your buttons up to execute their Python tasks!
+        # FIXED CRITICAL CONNECTIONS: Explicitly wires your buttons up to execute their Python tasks!
         self.playBtn.clicked.connect(self.resume_timer)
         self.pauseBtn.clicked.connect(self.pause_timer)
         self.stopBtn.clicked.connect(self.reset_timer)
@@ -116,9 +126,9 @@ class MHPlayTimer(QWidget):
         self.style_all_buttons()
 
         # Lightweight interface heartbeat loop updates the text readout every 1 second
-        self.visual_heartbeat = QTimer(self)
-        self.visual_heartbeat.timeout.connect(self.update_display_text)
-        self.visual_heartbeat.start(1000)
+        self.session_clock = QTimer(self)
+        self.session_clock.timeout.connect(self.update_display_text)
+        self.session_clock.start(1000)
 
     def style_theme_button(self, button, icon_filename, fallback_text, tooltip):
         button.setFixedWidth(22)
@@ -149,42 +159,50 @@ class MHPlayTimer(QWidget):
     def label_clicked_event(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             current_minutes = 120
-            if self.env and "play_timer_minutes" in self.env.session:
-                current_minutes = self.env.session["play_timer_minutes"]
+            if self.env and "play_timer_minutes" in self.env.config:
+                current_minutes = self.env.config["play_timer_minutes"]
 
             new_minutes, ok_pressed = QInputDialog.getInt(
                 self, "Set Break Alarm", "Enter break interval (Minutes):", current_minutes, 1, 1440, 1
             )
             
             if ok_pressed and self.env:
-                self.env.session["play_timer_minutes"] = new_minutes
-                if hasattr(self.env, 'saveSession'):
-                    self.env.saveSession()
-                
-                if hasattr(self.parent, 'seconds_elapsed'):
-                    self.parent.seconds_elapsed = 0
-                    self.parent.total_minutes_elapsed = 0
-                    self.parent.reminder_fired = False
-                
-                self.resume_timer()
+                self.env.config["play_timer_minutes"] = new_minutes
+                self.reset_timer()
+    
+    def timeElapsed(self):
+        s_elapsed = self.seconds_elapsed
+        hours = s_elapsed // 3600
+        minutes = (s_elapsed % 3600) // 60
+        seconds = s_elapsed % 60
+        return hours, minutes, seconds
 
     def pause_timer(self):
-        main_clock = getattr(self.parent, 'session_clock', None)
-        if main_clock:
-            main_clock.stop()
+        self.session_clock.stop()
+        hours, minutes, seconds = self.timeElapsed()
+        self.timeLabel.setText(f"Session: {hours:02d}:{minutes:02d}:{seconds:02d} (Paused)")
+        self.timeLabel.setStyleSheet(self.timeLabStyleOff)
+        self.timeLabel.update()
 
     def resume_timer(self):
-        main_clock = getattr(self.parent, 'session_clock', None)
-        if main_clock:
-            main_clock.start(1000)
+        self.session_clock.start(1000)
 
     def reset_timer(self):
-        if hasattr(self.parent, 'seconds_elapsed'):
-            self.parent.seconds_elapsed = 0
-            self.parent.total_minutes_elapsed = 0
-            if hasattr(self.parent, 'reminder_fired'):
-                self.parent.reminder_fired = False
+        self.seconds_elapsed = 0
+        self.total_minutes_elapsed = 0
+        self.reminder_fired = False
         self.resume_timer()
+
+    def play_timer_tick(self):
+        self.seconds_elapsed += 1
+
+        # Read chosen custom tracking minutes live from configuration definitions memory
+        chosen_minutes = self.env.config.get("play_timer_minutes", 120)
+        target_seconds_limit = int(chosen_minutes * 60)
+
+        # Flag a background timer event when active limit frames are crossed
+        if self.seconds_elapsed >= target_seconds_limit and not self.reminder_fired:
+            self.reminder_fired = True
 
     def style_all_buttons(self):
         self.style_theme_button(self.playBtn, "play_icon.png", "▶️", "Resume Session Tracking")
@@ -192,41 +210,29 @@ class MHPlayTimer(QWidget):
         self.style_theme_button(self.stopBtn, "reset2.png", "🔄", "Stop and Reset Session Clock")
 
     def update_display_text(self):
-        if hasattr(self.parent, 'seconds_elapsed'):
-            s_elapsed = self.parent.seconds_elapsed
-            hours = s_elapsed // 3600
-            minutes = (s_elapsed % 3600) // 60
-            seconds = s_elapsed % 60
-            
-            main_clock = getattr(self.parent, 'session_clock', None)
-            is_active = main_clock.isActive() if main_clock else True
-            
-            if not is_active:
-                self.timeLabel.setText(f"Session: {hours:02d}:{minutes:02d}:{seconds:02d} (Paused)")
-                self.timeLabel.setStyleSheet("font-family: 'Segoe UI', monospace; font-size: 11px; color: #777777; font-weight: bold; background: transparent; margin-top: 0px !important; padding: 0px 4px !important;")
-                return
-                
-            self.timeLabel.setText(f"Session: {hours:02d}:{minutes:02d}:{seconds:02d}")
-            
-            if hasattr(self.parent, 'reminder_fired') and self.parent.reminder_fired and hasattr(self.parent, 'session_clock'):
-                self.parent.session_clock.stop()
-                
-                chosen_minutes = 120
-                if self.env and "play_timer_minutes" in self.env.session:
-                    chosen_minutes = self.env.session["play_timer_minutes"]
-                    
-                self.parent.total_minutes_elapsed += chosen_minutes
-                
-                alert_box = MHPlayAlert(self.parent, chosen_minutes, self.parent.total_minutes_elapsed)
-                result = alert_box.exec()
-                if result == QDialog.Accepted:
-                    self.parent.seconds_elapsed = 0
-                    self.parent.total_minutes_elapsed = 0
-                else:
-                    self.parent.seconds_elapsed = 0
-                    
-                self.parent.reminder_fired = False
-                self.parent.session_clock.start(1000)
+        self.play_timer_tick()
 
-            self.timeLabel.setStyleSheet("font-family: 'Segoe UI', monospace; font-size: 11px; color: #ffffff; font-weight: bold; background: transparent; margin-top: 0px !important; padding: 0px 4px !important;")
+        hours, minutes, seconds = self.timeElapsed()
+        self.timeLabel.setText(f"Session: {hours:02d}:{minutes:02d}:{seconds:02d}")
+            
+        if self.reminder_fired:
+            self.session_clock.stop()
+                
+            chosen_minutes = 120
+            if self.env and "play_timer_minutes" in self.env.config:
+                chosen_minutes = self.env.config["play_timer_minutes"]
+                    
+            self.total_minutes_elapsed += chosen_minutes
+                
+            alert_box = MHPlayAlert(self.parent, chosen_minutes, self.total_minutes_elapsed)
+            result = alert_box.exec()
+            if result == QDialog.Accepted:
+                self.total_minutes_elapsed = 0
+            self.seconds_elapsed = 0
+                  
+            self.reminder_fired = False
+            self.session_clock.start(1000)
+
+        # --- LOCKED PERMANENTLY TO PURE WHITE ---
+        self.timeLabel.setStyleSheet(self.timeLabStyleOn)
                 

@@ -8,7 +8,8 @@
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QPushButton, QAbstractItemView, QRadioButton,
-    QGroupBox, QCheckBox, QLineEdit, QGridLayout, QTabWidget, QTableWidget, QTableWidgetItem, QMessageBox
+    QGroupBox, QCheckBox, QLineEdit, QGridLayout, QTabWidget, QTableWidget, QTableWidgetItem, QMessageBox,
+    QScrollArea
 )
 from PySide6.QtCore import Qt, QEvent, QObject
 from PySide6.QtGui import QIntValidator, QKeySequence
@@ -44,9 +45,14 @@ class MHPrefWindow(QWidget):
 
         layout = QVBoxLayout()
         self.tab_widget = QTabWidget()
+
         self.maintab = QWidget()
+        scrollArea = QScrollArea()
+        scrollArea.setWidget(self.maintab)
+        scrollArea.setWidgetResizable(True)
+
         self.keytab  = QWidget()
-        self.tab_widget.addTab(self.maintab, "Main")
+        self.tab_widget.addTab(scrollArea, "Main")
         self.tab_widget.addTab(self.keytab, "Input")
         layout.addWidget(self.tab_widget)
         self.initMainTab(self.maintab)
@@ -237,8 +243,7 @@ class MHPrefWindow(QWidget):
         self.timerInput = QLineEdit()
         self.timerInput.setPlaceholderText("e.g. 120")
         self.timerInput.setFixedWidth(60)
-        self.timerInput.setText(str(env.session.get("play_timer_minutes", 120)))
-        self.timerInput.editingFinished.connect(self.save_timer_preference)
+        self.timerInput.setText(str(env.config.get("play_timer_minutes", 120)))
         
         t_layout.addWidget(self.timerInput)
         t_layout.addStretch()
@@ -391,6 +396,25 @@ class MHPrefWindow(QWidget):
         if self.redirect_bool != env.config["redirect_messages"] or self.redirect_path != env.path_error:
             env.reDirect()
 
+        # save timer
+        #
+        try:
+            minutes = int(self.timerInput.text().strip())
+            if minutes < 1:
+                minutes = 1  # Rigid safety barrier floor limit parameter
+        except ValueError:
+            minutes = 120    # Gracefully restore default fallback if corrupted
+        
+        self.timerInput.setText(str(minutes))
+        env.config["play_timer_minutes"] = minutes
+        
+        # Dynamically push updates to the active running engine layout without needing an app restart
+        if hasattr(self.parent, 'play_timer_engine') and self.parent.play_timer_engine:
+            if hasattr(self.parent.play_timer_engine, 'update_target_limit'):
+                print ("updating")
+                self.parent.play_timer_engine.update_target_limit(minutes)
+
+
         env.logLine(2, "Save preferences in " + env.path_userconf)
         if env.writeJSON(env.path_userconf, env.config) is False:
             env.logLine(1, env.last_error)
@@ -433,25 +457,4 @@ class MHPrefWindow(QWidget):
                 "No Cache Found",
                 "The cache paths are already clean or could not be detected.\n" + "\n".join(errors)
             )
-
-    def save_timer_preference(self):
-        """Validates the input minutes, saves to makehuman2.conf via saveSession, and live updates the engine."""
-        env = self.parent.env
-        try:
-            minutes = int(self.timerInput.text().strip())
-            if minutes < 1:
-                minutes = 1  # Rigid safety barrier floor limit parameter
-        except ValueError:
-            minutes = 120    # Gracefully restore default fallback if corrupted
-            self.timerInput.setText("120")
-            
-        env.session["play_timer_minutes"] = minutes
-        
-        if hasattr(env, 'saveSession'):
-            env.saveSession()
-        
-        # Dynamically push updates to the active running engine layout without needing an app restart
-        if hasattr(self.parent, 'play_timer_engine') and self.parent.play_timer_engine:
-            if hasattr(self.parent.play_timer_engine, 'update_target_limit'):
-                self.parent.play_timer_engine.update_target_limit(minutes)
 

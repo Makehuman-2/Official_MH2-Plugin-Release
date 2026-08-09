@@ -125,11 +125,13 @@ class CommunityPanel(QtWidgets.QWidget):
         # 2. LOCAL TOML BACKUP FALLBACK ROUTINE
         # If no installed packages are found, read directly from the project root folder
 
+        tomlreadmode = "rb"
         if not discovered:
             try:
                 import tomllib  # Built-in python 3.11+
             except ImportError:
                 try:
+                    tomlreadmode = "r"
                     import toml as tomllib # Fallback for python < 3.11
                 except ImportError:
                     self.last_error = "No toml-Library available for python < 3.11"
@@ -145,7 +147,7 @@ class CommunityPanel(QtWidgets.QWidget):
 
             if os.path.exists(toml_path):
                 try:
-                    with open(toml_path, "r") as f:
+                    with open(toml_path, tomlreadmode) as f:
                         toml_data = tomllib.load(f)
                 except Exception as error:
                     self.last_error = "Error while reading " + toml_path + ": " + str(error)

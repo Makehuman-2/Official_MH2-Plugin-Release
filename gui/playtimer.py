@@ -13,14 +13,11 @@ from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QPushBu
 from PySide6.QtGui import QIcon
 
 class MHPlayAlert(QDialog):
-    """A completely borderless, theme-compliant dialog window that completely erases OS blue buttons."""
     def __init__(self, parent, custom_minutes, total_minutes):
         super().__init__(parent)
         
-        # Destroys the locked Windows title bar completely to kill the blue color
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         
-        # Enforces your exact dark charcoal (#2b2b2b) and glowing orange border themes cleanly
         self.setStyleSheet(
             "QDialog { background-color: #2b2b2b; border: 3px solid #f69038; border-radius: 8px; }"
             "QLabel { color: #ffffff; font-family: 'Segoe UI'; font-size: 12px; margin-top: 2px; background: transparent; }"
@@ -32,7 +29,7 @@ class MHPlayAlert(QDialog):
         master_layout.setContentsMargins(0, 0, 0, 0)
         master_layout.setSpacing(0)
         
-        # 1. OUR CUSTOM THEME HEADER BAR
+        # 1. CUSTOM THEME HEADER BAR
         custom_header = QWidget()
         custom_header.setStyleSheet("background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #f69038, stop:1 #323232); border-top-left-radius: 5px; border-top-right-radius: 5px;")
         header_layout = QHBoxLayout(custom_header)
@@ -54,7 +51,7 @@ class MHPlayAlert(QDialog):
         text_lbl = QLabel(
             f"<h3>You have been creating for a total of {total_minutes} minutes!</h3>"
             f"<p>To stay fresh and prevent creative eye strain, it is highly recommended to take a short break ⏱️.</p>"
-            f"<b>Please remember to save your active character modifications before closing MH2!</b>"
+            f"<b>Please remember to save your active character modifications before closing MH2 💾!</b>"
         )
         text_lbl.setWordWrap(True)
         content_layout.addWidget(text_lbl)
@@ -99,7 +96,10 @@ class MHPlayTimer(QWidget):
         # 1. The Clickable Time Ticker Label Component
         self.timeLabStyleOn = "font-family: 'Segoe UI', monospace; font-size: 11px; color: #ffffff; font-weight: bold; background: transparent; margin-top: 0px; padding: 0px 4px;"
         self.timeLabStyleOff= "font-family: 'Segoe UI', monospace; font-size: 11px; color: #777777; font-weight: bold; background: transparent; margin-top: 0px; padding: 0px 4px;"
-        self.timeLabel = QLabel("Session: 00:00:00 (paused)")
+        if self.env.osindex == 1:
+            self.timeLabel = QLabel("Session: 00:00:00 (paused)")
+        else:
+            self.timeLabel = QLabel("Session: 00:00:00")
         self.timeLabel.setStyleSheet(self.timeLabStyleOn)
         self.timeLabel.setToolTip("Click to change break reminder interval!")
         self.timeLabel.mousePressEvent = self.label_clicked_event
@@ -165,10 +165,10 @@ class MHPlayTimer(QWidget):
             new_minutes, ok_pressed = QInputDialog.getInt(
                 self, "Set Break Alarm", "Enter break interval (Minutes):", current_minutes, 1, 1440, 1
             )
-            
+
             if ok_pressed and self.env:
                 self.env.config["play_timer_minutes"] = new_minutes
-                self.reset_timer()
+            self.resume_timer()
     
     def timeElapsed(self):
         s_elapsed = self.seconds_elapsed

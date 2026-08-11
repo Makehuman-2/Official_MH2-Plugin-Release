@@ -191,7 +191,7 @@ class MHMainWindow(QMainWindow):
             self.addActCallBack(regenerate, "System 3d Objects", self.regenerate_sys3dobjs)
 
         # ==============================================================================
-        # FIXED EMBEDDED COMMUNITY PANEL MOUNT (ZERO DUPLICATE LAUNCHES)
+        # EMBEDDED COMMUNITY PANEL MOUNT (ZERO DUPLICATE LAUNCHES)
         # ==============================================================================
         set_menu.addSeparator()
         from gui.plugin_panel import CommunityPanel
@@ -200,20 +200,35 @@ class MHMainWindow(QMainWindow):
         self.community_extension_panel = CommunityPanel(app_reference=self, glob_reference=glob)
 
         def display_embedded_panel():
-            """Ensures the panel unhides your sidebar layout columns when called."""
+            """
+            Dynamic Show/Hide Toggle Loop.
+            Only applies window focus flags when opening to prevent thread freezes!
+            """
+            # If the panel is already open on screen, hide it cleanly and exit!
+            if self.community_extension_panel.isVisible():
+                self.community_extension_panel.hide()
+                print("[Menu Toggle] Community Extensions panel safely hidden.")
+                return 
+                
+            # If it is currently hidden, proceed with your original mounting logic:
             if self.visRightColumn:
                 self.visRightColumn.show()
                 
-            # 2. EMBED IN PLACE: Inject the checklist panel straight into your existing layout skeleton!
             if self.community_extension_panel.parent() is None:
                 if self.rightColumn and getattr(self.rightColumn, 'layout', None) and self.rightColumn.layout():
                     self.rightColumn.layout().addWidget(self.community_extension_panel)
                 elif self.ToolBox and getattr(self.ToolBox, 'layout', None) and self.ToolBox.layout():
                     self.ToolBox.layout().addWidget(self.community_extension_panel)
 
+            # =====================================================================
+            # >>> CONDITIONAL FOCUS LOCK (STOPS INTENSE THREAD FREEZES) >>>
+            # =====================================================================
+            # We move these lines here so they ONLY fire when showing the panel!
             self.community_extension_panel.show()
             self.community_extension_panel.raise_()
             self.community_extension_panel.setFocus()
+            print("[Menu Toggle] Community Extensions panel safely displayed and focused.")
+
 
         # 3. Connect the Settings menu to pull focus to the embedded layout
         self.addActCallBack(set_menu, "Community Plugins", display_embedded_panel)

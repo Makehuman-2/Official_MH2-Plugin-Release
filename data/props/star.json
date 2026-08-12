@@ -1,0 +1,23 @@
+{
+    "name": "star",
+    "offset": [
+        5.299999999999995,
+        3.2000000000000015,
+        0.0
+    ],
+    "rotation": [
+        90.0,
+        0.0,
+        0.0
+    ],
+    "scale": [
+        4.6,
+        4.6,
+        4.6
+    ],
+    "visible": true,
+    "parenting": {
+        "enabled": true,
+        "target_bone": "hand_R"
+    }
+}

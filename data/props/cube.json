@@ -1,0 +1,23 @@
+{
+    "name": "cube",
+    "offset": [
+        -2.7755575615628914e-17,
+        -7.199999999999992,
+        0.0
+    ],
+    "rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "visible": true,
+    "parenting": {
+        "enabled": false,
+        "target_bone": "None"
+    }
+}

@@ -1,0 +1,22 @@
+# MakeHuman2 Material definition for star.obj
+name star.obj
+description star.obj material
+
+ambientColor 1.0 1.0 1.0
+diffuseColor 0.8 0.2 0.2
+specularColor 0.5 0.5 0.5
+emissiveColor 0.0 0.0 0.0
+metallicFactor 0.0
+roughnessFactor 0.5
+
+transparent False
+alphaToCoverage False
+backfaceCull False
+
+diffuseTexture extralargewhitedots.png
+aomapIntensity 1.0
+
+
+shader phong
+
+

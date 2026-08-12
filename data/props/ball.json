@@ -1,0 +1,23 @@
+{
+    "name": "ball",
+    "offset": [
+        -4.640617370605469,
+        1.8179787397384644,
+        2.0938005447387695
+    ],
+    "parenting": {
+        "enabled": true,
+        "target_bone": "hand_R"
+    },
+    "rotation": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "scale": [
+        1.0,
+        1.0,
+        1.0
+    ],
+    "visible": true
+}

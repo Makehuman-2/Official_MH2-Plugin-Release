@@ -194,7 +194,6 @@ class MHMainWindow(QMainWindow):
         # EMBEDDED COMMUNITY PANEL MOUNT (ZERO DUPLICATE LAUNCHES)
         # ==============================================================================
         set_menu.addSeparator()
-        from gui.plugin_panel import CommunityPanel
         
         # 1. Instantiate the widget permanently inside your main window memory on startup
         self.community_extension_panel = CommunityPanel(app_reference=self, glob_reference=glob)

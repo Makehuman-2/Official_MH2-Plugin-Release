@@ -6,12 +6,13 @@
     * DownLoadImport
 """
 from PySide6.QtWidgets import (
-    QGroupBox, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit, QLabel,
-    QMessageBox, QRadioButton, QCheckBox, QComboBox, QStyle, QVBoxLayout
+    QGroupBox, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QLineEdit, QLabel, QWidget,
+    QMessageBox, QRadioButton, QCheckBox, QComboBox, QStyle, QVBoxLayout, QScrollArea, QSizePolicy
     )
 
+from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt
-from gui.tablewindow import MHSelectAssetWindow
+from gui.assettabwindow import MHSelectAssetWindow
 from gui.common import ErrorBox, WorkerThread, MHBusyWindow, IconButton, MHFileRequest, MHProgWindow
 from opengl.texture import MH_Thumb
 from core.importfiles import AssetPack
@@ -75,6 +76,16 @@ class DownLoadImport(QVBoxLayout):
         self.download_cart = []
         self.cart_processing = False
 
+        layout = QVBoxLayout()
+        container = QWidget()
+        container.setLayout(layout)
+        #container.setSizePolicy(QSizePolicy.Policy.Expanding)
+        scrollArea = QScrollArea()
+        scrollArea.setWidget(container)
+        scrollArea.setWidgetResizable(True)
+        scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
         self.latest = self.assets.testAssetList(self.assetlistpath)
         if self.latest is None:
             self.asdlbutton = QPushButton("Download Asset and Assetpack list")
@@ -125,7 +136,7 @@ class DownLoadImport(QVBoxLayout):
         gb.setObjectName("subwindow")
         vlayout = QVBoxLayout()
 
-        vlayout.addWidget(QLabel("\nBrowse in list to find your asset."))
+        vlayout.addWidget(QLabel("Browse in list to find your asset."))
         self.browsebutton=QPushButton("Asset Browser")
         self.browsebutton.setEnabled(self.latest is not None)
         self.browsebutton.clicked.connect(self.selectfromList)
@@ -134,6 +145,35 @@ class DownLoadImport(QVBoxLayout):
 
         gb.setLayout(vlayout)
         self.addWidget(gb)
+
+        # ----------------------------------------------------
+        # BATCH CART PANEL Begins
+        # ----------------------------------------------------
+        checkout_panel = QGroupBox("Batch Asset Cart")
+        checkout_panel.setObjectName("subwindow")
+        panel_layout = QHBoxLayout(checkout_panel)
+
+        self.masterCartLabel = QLabel("Cart is empty")
+        panel_layout.addWidget(self.masterCartLabel)
+
+        # Configures text string space
+        self.checkoutBtn = QPushButton("Download All Items")
+        self.checkoutBtn.setDisabled(True) 
+        
+        # Pulls the icon from icon/cart.png
+        icon_path = os.path.join(self.env.path_sysicon, "cart.png")
+        
+        if os.path.exists(icon_path):
+            self.checkoutBtn.setIcon(QIcon(icon_path))
+        else:
+            # Fallback backup icon if path fails
+            dl_icon = self.parent.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton)
+            self.checkoutBtn.setIcon(dl_icon)
+            
+        self.checkoutBtn.clicked.connect(self.on_checkout_clicked)
+        panel_layout.addWidget(self.checkoutBtn)
+
+        self.addWidget(checkout_panel) 
 
         gb = QGroupBox("Asset Pack")
         gb.setObjectName("subwindow")
@@ -208,38 +248,12 @@ class DownLoadImport(QVBoxLayout):
         self.clbutton.clicked.connect(self.cleanUp)
         ilayout.addWidget(self.clbutton)
         gb.setLayout(ilayout)
-        self.addWidget(gb)
+        layout.addWidget(gb)
+        layout.addStretch()
         self.packinserted()
         self.fnameinserted()
-        # ----------------------------------------------------
-        # BATCH CART PANEL Begins
-        # ----------------------------------------------------
-        checkout_panel = QGroupBox("Batch Asset Cart")
-        panel_layout = QHBoxLayout(checkout_panel)
 
-        self.masterCartLabel = QLabel("Cart is empty")
-        panel_layout.addWidget(self.masterCartLabel)
-        panel_layout.addStretch()
-
-        # Configures text string space
-        self.checkoutBtn = QPushButton("Download All Items")
-        self.checkoutBtn.setDisabled(True) 
-        
-        # Pulls the icon from icon/cart.png
-        from PySide6.QtGui import QIcon
-        icon_path = os.path.join(self.env.path_sysicon, "cart.png")
-        
-        if os.path.exists(icon_path):
-            self.checkoutBtn.setIcon(QIcon(icon_path))
-        else:
-            # Fallback backup icon if path fails
-            dl_icon = self.parent.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton)
-            self.checkoutBtn.setIcon(dl_icon)
-            
-        self.checkoutBtn.clicked.connect(self.on_checkout_clicked)
-        panel_layout.addWidget(self.checkoutBtn)
-
-        self.addWidget(checkout_panel) 
+        self.addWidget(scrollArea)
 
     def searchzipfile(self):
         freq = MHFileRequest(self.glob, "Select zipfile", "compressed file (*.zip)", "")

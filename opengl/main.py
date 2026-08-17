@@ -19,7 +19,8 @@ from OpenGL import GL as gl
 from opengl.info import GLDebug
 from opengl.shaders import ShaderRepository
 from opengl.buffers import OpenGlBuffers, RenderedObject
-from opengl.camera import Camera, Light
+from opengl.camera import Camera
+from opengl.light import Light
 from opengl.skybox import OpenGLSkyBox
 from opengl.prims import VisMarker
 from opengl.scene import Scene

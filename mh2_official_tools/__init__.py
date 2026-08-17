@@ -1,3 +1,6 @@
+"""
+    Official core tools initialization file for MH2
+"""
 from . import make_outfit
 from . import prop_panel
-from . import box_zoom_plugin
+from . import camera_controls

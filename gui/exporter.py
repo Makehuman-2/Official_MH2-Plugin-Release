@@ -1,6 +1,6 @@
 """
     License information: data/licenses/makehuman_license.txt
-    Author: black-punkduck, Elvaerwyn_MH2 2026 V1.2
+    Author: black-punkduck, Elvaerwyn_MH2 2026 V1.3
 
     Classes:
     * ExporterValues
@@ -204,28 +204,31 @@ class ExportLeftPanel(QVBoxLayout):
                 "animset": False, "animmode": False, "poseset": True, "posemode": False,
                 "helpset": False, "helpmode": False, "normset": False, "normmode": False,
                 "customset": False, "custommode": False},
+
             ".glb": { "tip": common + "GLB/GLTF units are usually meters",
                 "num": 0, "binset": False, "binmode": True, "imgset": True, "imgmode": "both", "hiddenset": True, "hiddenmode": False,
                 "animset": True, "animmode": False, "poseset": False, "posemode": False,
                 "helpset": False, "helpmode": False, "normset": False, "normmode": True,
-                "customset": True, "custommode": False},
+                "customset": True, "custommode": True}, 
+
             ".mh2b": { "tip": common + "Blender units are usually meters",
                 "num": 0, "binset": False, "binmode": True, "imgset": False, "imgmode": False, "hiddenset": True, "hiddenmode": False,
                 "animset": True, "animmode": False, "poseset": False, "posemode": False,
                 "helpset": False, "helpmode": False, "normset": False, "normmode": False,
-                "customset": False, "custommode": False},
+                "customset": True, "custommode": True},
+
             ".obj": { "tip": common + "Wavefront units are usually meters",
                 "num": 0, "binset": False, "binmode": False, "imgset": False, "imgmode": False, "hiddenset": True, "hiddenmode": False,
                 "animset": False, "animmode": False, "poseset": True, "posemode": False,
                 "helpset": True, "helpmode": False, "normset": True, "normmode": False,
-                "customset": True, "custommode": False},
+                "customset": True, "custommode": True},
+
             ".bvh": { "tip": common + "BVH units are usually the same as the internal scale",
                 "num": 0, "binset": False, "binmode": False,  "imgset": False, "imgmode": False, "hiddenset": False, "hiddenmode": False,
                 "animset": False, "animmode": True, "poseset": False, "posemode": False,
                 "helpset": False, "helpmode": False, "normset": False, "normmode": False,
                 "customset": False, "custommode": False},
             }
-
 
         # set options according to type, only change it, if mode is changed
         #
@@ -263,10 +266,14 @@ class ExportLeftPanel(QVBoxLayout):
         self.norm.setChecked(self.values.normals)
         self.norm.setEnabled(attr["normset"])
 
-        # in case of no props
-        if len(self.glob.custom_props_list) == 0:
-            self.props_toggle.setChecked(False)
-            self.props_toggle.setEnabled(False)
+        # Read directly from the active prop database list variables safely
+        custom_props = getattr(self.glob, 'custom_props_list', [])
+        
+        # If the list is empty, don't lock the user out! Let them choose to enable
+        # custom props dynamically so the state cache stays active in memory.
+        if len(custom_props) == 0:
+            self.props_toggle.setChecked(self.values.save_props)
+            self.props_toggle.setEnabled(attr["customset"])
         else:
             self.props_toggle.setChecked(self.values.save_props)
             self.props_toggle.setEnabled(attr["customset"])
@@ -388,8 +395,19 @@ class ExportLeftPanel(QVBoxLayout):
         #
         if etype == ".glb":
             self.setAnimMode(False)
-            gltf = gltfExport(self.glob, folder, texfolder, self.values.imgmode, self.values.savehiddenverts,
-                    self.values.onground,  self.values.animation, self.values.save_props, scale)
+            
+            # FIXED: Explicit keyword names completely eliminate position mix-ups!
+            gltf = gltfExport(
+                glob=self.glob, 
+                exportfolder=folder, 
+                imagefolder=texfolder, 
+                includetextures=self.values.imgmode, 
+                hiddenverts=self.values.savehiddenverts,
+                onground=self.values.onground,  
+                animation=self.values.animation, 
+                saveprops=self.values.save_props, # <--- Safely lands right where it belongs!
+                scale=scale
+            )
             success = gltf.binSave(self.bc, path)
             self.setAnimMode(lastanim)
 
@@ -404,6 +422,7 @@ class ExportLeftPanel(QVBoxLayout):
             self.setAnimMode(False)
             blcom = blendCom(self.glob, folder, texfolder, self.values.savehiddenverts,
                     self.values.onground, self.values.animation, scale)
+            blcom.save_props = self.values.save_props 
             success = blcom.binSave(self.bc, path)
             self.setAnimMode(lastanim)
 
@@ -426,7 +445,6 @@ class ExportLeftPanel(QVBoxLayout):
             QMessageBox.information(self.parent, "Done!", "Successful exported as " + path)
         else:
             ErrorBox(self.parent, self.env.last_error)
-
 
 class ExportRightPanel(QVBoxLayout):
     def __init__(self, parent, connector):
@@ -482,4 +500,3 @@ class ExportRightPanel(QVBoxLayout):
         self.env.logLine(2, "export BVH called")
         self.leftPanel.setExportType(".bvh")
         self.setChecked(4)
-

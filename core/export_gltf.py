@@ -1,6 +1,6 @@
 """
     License information: data/licenses/makehuman_license.txt
-    Author: black-punkduck, Elvaerwyn_MH2 V 1.2 2026
+    Author: black-punkduck, Elvaerwyn_MH2 V 1.3 2026
 
     Classes:
     * gltfExport
@@ -17,6 +17,13 @@ import json
 import struct
 import numpy as np
 from obj3d.skeleton import skeleton as newSkeleton
+
+class MH2ExtendedJSONEncoder(json.JSONEncoder):
+    """Safely encodes complex NumPy vectors and layout attributes into valid glTF strings."""
+    def default(self, obj):
+        if isinstance(obj, (np.ndarray, np.generic)):
+            return obj.tolist()
+        return super().default(obj)
 
 class gltfExport:
     """Class representation of glTF export function
@@ -70,7 +77,6 @@ class gltfExport:
         self.REPEAT = 10497
         self.IMAGEJPEG = 'image/jpeg'
         self.IMAGEPNG = "image/png"
-
 
         self.json = {}
         self.json["asset"] = {"generator": "makehuman2", "version": "2.0" }    # copyright maybe
@@ -411,7 +417,6 @@ class gltfExport:
         if extension not in self.json["extensionsUsed"]:
             self.json["extensionsUsed"].append(extension)
 
-
     def addMaterial(self, material, assettype):
         """
         :param material:  material from opengl.material
@@ -697,24 +702,37 @@ class gltfExport:
     def addNodes(self, baseclass):
         """
         Populates the glTF scene graph hierarchy.
-        Will safely process standalone workspace props even when a character mesh is not present!
+        Safely captures skeletal bone rigs even when character is in active posemode!
         """
-        # 1. Safely detect if a valid character mesh exists in the scene
         has_character = baseclass is not None and getattr(baseclass, 'baseMesh', None) is not None
         baseweights = None
+        bone_nodes_mapping = {}
 
         if has_character:
             skin = baseclass.baseMesh.material
-            if baseclass.skeleton is not None:
-                # Recalculate skeletal skinning weights
-                baseweights = baseclass.default_skeleton.bWeights.transferWeights(baseclass.skeleton)
-                self.json["skins"] = []
+            
+            # Look for active posemode rigs first, then fall back to standard matrices
+            active_skeleton = None
+            if getattr(baseclass, 'in_posemode', False) or getattr(baseclass, 'in_pose_mode', False):
+                active_skeleton = getattr(baseclass, 'pose_skeleton', getattr(baseclass, 'skeleton', None))
+            else:
+                active_skeleton = getattr(baseclass, 'skeleton', None)
+                
+            if active_skeleton is None:
+                active_skeleton = getattr(baseclass, 'default_skeleton', None)
+
+            if active_skeleton is not None and hasattr(baseclass, 'default_skeleton') and baseclass.default_skeleton:
+                try:
+                    baseweights = baseclass.default_skeleton.bWeights.transferWeights(active_skeleton)
+                    self.json["skins"] = []
+                except Exception:
+                    baseweights = None
 
             if baseclass.proxy is not None:
-                proxy = baseclass.attachedAssets[0]
-                if baseweights is not None:
+                proxy = baseclass.attachedAssets
+                if baseweights is not None and active_skeleton:
                     proxy.calculateBoneWeights()
-                    baseweights = proxy.bWeights.transferWeights(baseclass.skeleton)
+                    baseweights = proxy.bWeights.transferWeights(active_skeleton)
                 baseobject = proxy.obj
                 start = 1
             else:
@@ -731,10 +749,6 @@ class gltfExport:
 
             mesh = self.addMesh(baseobject, mat, baseweights)
             
-            # --- THE PLASTIC MAN FIX ---
-            # Instead of changing internal bones or subtracting vertices separately,
-            # we shift the parent node. In glTF, +Y is Up. Shifting the translation array 
-            # here pushes the model to sit on top of the ground plane (Y=0) without breaking skin weights.
             if self.onground and self.lowestPos != 0.0:
                 char_translation = [0.0, -self.lowestPos * self.scale, 0.0]
             else:
@@ -744,10 +758,9 @@ class gltfExport:
                 "name": charactername, 
                 "mesh": mesh, 
                 "children": [],
-                "translation": char_translation # Shifts mesh and root bone concurrently!
+                "translation": char_translation
             })
             
-            # Safely append the parent node to the scene structure
             if "nodes" not in self.json["scenes"][0]:
                 self.json["scenes"][0]["nodes"] = []
             self.json["scenes"][0]["nodes"].append(len(self.json["nodes"]) - 1)
@@ -755,37 +768,43 @@ class gltfExport:
             children = self.json["nodes"][0]["children"]
             childnum = 1
 
-            # Keep skeleton structure unchanged to prevent weight explosions
-            if baseweights is not None:
+            if baseweights is not None and active_skeleton:
                 self.json["nodes"][0]["skin"] = 0
                 if self.scale != 1.0:
                     self.debug("Resizing skeleton")
                     skeleton = newSkeleton(self.glob, "copy")
-                    skeleton.copyScaled(baseclass.skeleton, self.scale, 0.0, False)
+                    skeleton.copyScaled(active_skeleton, self.scale, 0.0, False)
                 else:
-                    skeleton = baseclass.skeleton
+                    skeleton = active_skeleton
 
                 bonename = list(skeleton.bones)[0]
                 bone = skeleton.bones[bonename]
 
                 self.bonestart = childnum
                 children.append(childnum)
+                
+                start_node_count = len(self.json["nodes"])
                 childnum = self.addBones(bone, childnum)
+                end_node_count = len(self.json["nodes"])
+                
+                for idx in range(start_node_count, end_node_count):
+                    node_entry = self.json["nodes"][idx]
+                    if node_entry.get("extras", {}).get("is_skeletal", False):
+                        bone_nodes_mapping[node_entry["name"]] = idx
+
                 self.addSkins(charactername)
                 self.addWeights(0, skeleton, baseobject)
 
-            # Process human assets attached directly to the base skeleton loop tracks
             assets_pool = baseclass.attachedAssets[start:] if hasattr(baseclass, 'attachedAssets') else []
             for elem in assets_pool:
                 current_obj = elem.obj
                 mat_idx = self.addMaterial(current_obj.material, elem.type)
-                if mat_idx == -1:
-                    return False
+                if mat_idx == -1: return False
 
                 weights = None
-                if baseweights is not None:
+                if baseweights is not None and active_skeleton:
                     elem.calculateBoneWeights()
-                    weights = elem.bWeights.transferWeights(baseclass.skeleton)
+                    weights = elem.bWeights.transferWeights(active_skeleton)
 
                 mesh_idx = self.addMesh(current_obj, mat_idx, weights)
                 self.json["nodes"].append({"name": self.nodeName(elem.filename), "mesh": mesh_idx})
@@ -801,79 +820,121 @@ class gltfExport:
                 self.json["scenes"][0]["nodes"] = []
             self.json["scenes"][0]["nodes"].append(0)
 
-        # Extract and translate your custom scene props independently
         if self.saveprops:
             custom_pool = self.glob.custom_props_list
-        """
-        for prop in custom_pool:
-            if hasattr(prop, 'mesh_reference') and prop.mesh_reference:
-                current_obj = prop.mesh_reference.obj
-                if not current_obj:
-                    continue
+            for prop in custom_pool:
+                if hasattr(prop, 'mesh_reference') and prop.mesh_reference:
+                    current_obj = prop.mesh_reference.obj
+                    if not current_obj: 
+                        continue
 
-                mat_idx = self.addMaterial(current_obj.material, "props")
-                if mat_idx == -1:
-                    return False
+                    mat_idx = self.addMaterial(current_obj.material, "props")
+                    if mat_idx == -1: 
+                        return False
 
-                mesh_idx = self.addMesh(current_obj, mat_idx, None)
+                    mesh_idx = self.addMesh(current_obj, mat_idx, None)
 
-                prop_node = {
-                    "name": getattr(prop, 'name', 'prop_asset'),
-                    "mesh": mesh_idx
-                }
+                    prop_node = {
+                        "name": getattr(prop, 'name', 'prop_asset'),
+                        "mesh": mesh_idx
+                    }
 
-                # TODO: position. rotation etc. should be calculated in routines in a math module!!
+                    is_attached = getattr(prop, 'use_parenting', False) and getattr(prop, 'parent_bone', 'None') != "None"
+                    raw_bone_name = getattr(prop, 'parent_bone', 'None')
 
-                if hasattr(prop, 'position'):
-                    prop_node["translation"] = [float(p) * self.scale for p in prop.position]
-                if hasattr(prop, 'rotation'):
-                    try:
-                        angles = np.radians(np.array(prop.rotation, dtype=float))
-                        cx, cy, cz = np.cos(angles / 2.0)
-                        sx, sy, sz = np.sin(angles / 2.0)
+                    # Case-Insensitive String Resolution Matrix Pass
+                    target_bone_node_idx = None
+                    if is_attached:
+                        # Normalize interface input strings to standard lowercase targets
+                        b_name_lower = raw_bone_name.lower()
+                        b_name_dot_lower = b_name_lower.replace("_", ".")
+                        b_name_under_lower = b_name_lower.replace(".", "_")
 
-                        qx = sx * cy * cz - cx * sy * sz
-                        qy = cx * sy * cz + sx * cy * sz
-                        qz = cx * cy * sz - sx * cy * sz
-                        qw = cx * cy * cz + sx * sy * sz
+                        # Build a normalized look-up registry table from your active map keys
+                        normalized_mapping = {k.lower(): v for k, v in bone_nodes_mapping.items()}
 
-                        prop_node["rotation"] = [float(qx), float(qy), float(qz), float(qw)]
-                    except Exception as rot_err:
-                        prop_node["rotation"] = [0.0, 0.0, 0.0, 1.0]
-                if hasattr(prop, 'scale'):
-                    prop_node["scale"] = [float(s) for s in prop.scale]
+                        if b_name_lower in normalized_mapping:
+                            target_bone_node_idx = normalized_mapping[b_name_lower]
+                        elif b_name_dot_lower in normalized_mapping:
+                            target_bone_node_idx = normalized_mapping[b_name_dot_lower]
+                        elif b_name_under_lower in normalized_mapping:
+                            target_bone_node_idx = normalized_mapping[b_name_under_lower]
 
-                self.json["nodes"].append(prop_node)
-                new_node_idx = len(self.json["nodes"]) - 1
-                
-                if "scenes" in self.json and len(self.json["scenes"]) > 0:
-                    if "nodes" not in self.json["scenes"][0]:
-                        self.json["scenes"][0]["nodes"] = []
-                    self.json["scenes"][0]["nodes"].append(new_node_idx)
-        """
+                    if target_bone_node_idx is not None:
+                        # Grab relative local adjustments instead of massive world coordinates
+                        offset_pos = getattr(prop, 'local_offset_pos', getattr(prop, 'position', [0.0, 0.0, 0.0]))
+                        prop_node["translation"] = [float(p) * self.scale for p in offset_pos]
+                        
+                        if hasattr(prop, 'rotation'):
+                            try:
+                                angles = np.radians(np.array(prop.rotation, dtype=float))
+                                cx, cy, cz = np.cos(angles / 2.0)
+                                sx, sy, sz = np.sin(angles / 2.0)
+                                qx = sx * cy * cz - cx * sy * sz
+                                qy = cx * sy * cz + sx * cy * sz
+                                qz = cx * cy * sz - sx * cy * sz
+                                qw = cx * cy * cz + sx * sy * sz
+                                prop_node["rotation"] = [float(qx), float(qy), float(qz), float(qw)]
+                            except Exception:
+                                prop_node["rotation"] = [0.0, 0.0, 0.0, 1.0]
+                                
+                        if hasattr(prop, 'scale'):
+                            prop_node["scale"] = [float(s) for s in prop.scale]
 
-        # Handle animations safely if a baseline human remains active in view loops
-        if has_character and self.animation and baseweights is not None and baseclass.bvh:
+                        # APPEND DIRECTLY TO THE CHILD TRACK OF YOUR ACTIVE SKELETAL JOINT NODE ARRAY
+                        self.json["nodes"].append(prop_node)
+                        new_node_idx = len(self.json["nodes"]) - 1
+                        
+                        if "children" not in self.json["nodes"][target_bone_node_idx]:
+                            self.json["nodes"][target_bone_node_idx]["children"] = []
+                        self.json["nodes"][target_bone_node_idx]["children"].append(new_node_idx)
+                    else:
+                        # Freestanding room layout assets safely fall back to standard world space rules
+                        if hasattr(prop, 'position'):
+                            prop_node["translation"] = [float(p) * self.scale for p in prop.position]
+                        if hasattr(prop, 'rotation'):
+                            try:
+                                angles = np.radians(np.array(prop.rotation, dtype=float))
+                                cx, cy, cz = np.cos(angles / 2.0)
+                                sx, sy, sz = np.sin(angles / 2.0)
+                                qx = sx * cy * cz - cx * sy * sz
+                                qy = cx * sy * cz + sx * cy * sz
+                                qz = cx * cy * sz - sx * cy * sz
+                                qw = cx * cy * cz + sx * sy * sz
+                                prop_node["rotation"] = [float(qx), float(qy), float(qz), float(qw)]
+                            except Exception:
+                                prop_node["rotation"] = [0.0, 0.0, 0.0, 1.0]
+                        if hasattr(prop, 'scale'):
+                            prop_node["scale"] = [float(s) for s in prop.scale]
+
+                        self.json["nodes"].append(prop_node)
+                        new_node_idx = len(self.json["nodes"]) - 1
+                        
+                        if "scenes" in self.json and len(self.json["scenes"]) > 0:
+                            if "nodes" not in self.json["scenes"][0]:
+                                self.json["scenes"][0]["nodes"] = []
+                            self.json["scenes"][0]["nodes"].append(new_node_idx)
+
+        # Handle animations safely
+        if has_character and self.animation and baseweights is not None and baseclass.bvh and active_skeleton:
             baseclass.bvh.modCorrections()
-            self.animYoffset = baseclass.skeleton.rootLowestDistance(baseclass.bvh.joints, 0, baseclass.bvh.frameCount) + self.lowestPos
-            if baseclass.skeleton == baseclass.default_skeleton:
+            self.animYoffset = active_skeleton.rootLowestDistance(baseclass.bvh.joints, 0, baseclass.bvh.frameCount) + self.lowestPos
+            
+            if active_skeleton == baseclass.default_skeleton:
                 self.addAnimations(skeleton, baseclass.bvh, True)
             else:
                 self.debug("Animation will be posed by references")
                 self.addAnimations(skeleton, baseclass.bvh, False)
+                
             baseclass.bvh.identFinal()
 
         self.json["buffers"].append({"byteLength": self.bufferoffset})
 
-        # cleanup
-        #
         if len(self.json["extensionsUsed"]) == 0:
             del self.json["extensionsUsed"]
 
         self.env.logLine(32, str(self))
         return True
-
-
 
     def binSave(self, baseclass, filename):
         #
@@ -887,12 +948,12 @@ class gltfExport:
         if self.addNodes(baseclass) is False:
             return False
 
-        #TODO do we need an _ExtendedEncoder for JSON?
-
         version = struct.pack('<I', self.GLTF_VERSION)
         length = 12         # header length (always fix 12 bytes)
 
-        jsondata = json.dumps(self.json, indent=None, allow_nan=False, skipkeys=True, separators=(',', ':')).encode("utf-8")
+        # Safely compiles JSON data while converting NumPy arrays into lists automatically
+        jsondata = json.dumps(self.json, indent=None, allow_nan=False, skipkeys=True, 
+                              separators=(',', ':'), cls=MH2ExtendedJSONEncoder).encode("utf-8")
 
         # now pad json data to align with 4
         #

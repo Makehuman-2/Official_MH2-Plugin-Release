@@ -620,6 +620,7 @@ class MHMainWindow(QMainWindow):
                 self.leftColumn.setTitle("Import file :: parameters")
                 dlform = DownLoadImport(self, self.graph.view, self.setWindowTitle)
                 self.LeftBox.addLayout(dlform)
+                return
             self.LeftBox.addStretch()
             return
 

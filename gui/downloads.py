@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QMessageBox, QRadioButton, QCheckBox, QComboBox, QStyle, QVBoxLayout, QScrollArea, QSizePolicy
     )
 
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QFontMetrics
 from PySide6.QtCore import Qt
 from gui.assettabwindow import MHSelectAssetWindow
 from gui.common import ErrorBox, WorkerThread, MHBusyWindow, IconButton, MHFileRequest, MHProgWindow
@@ -73,18 +73,19 @@ class DownLoadImport(QVBoxLayout):
 
         super().__init__()
 
-        self.download_cart = []
-        self.cart_processing = False
-
-        layout = QVBoxLayout()
         container = QWidget()
+        layout = QVBoxLayout()
         container.setLayout(layout)
-        #container.setSizePolicy(QSizePolicy.Policy.Expanding)
         scrollArea = QScrollArea()
-        scrollArea.setWidget(container)
         scrollArea.setWidgetResizable(True)
         scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        layout.setContentsMargins(0, 0, 0, 0)
+        scrollArea.setWidget(container)
+
+
+        self.download_cart = []
+        self.cart_processing = False
 
         self.latest = self.assets.testAssetList(self.assetlistpath)
         if self.latest is None:
@@ -183,7 +184,9 @@ class DownLoadImport(QVBoxLayout):
         ilayout = QVBoxLayout()
         ilayout.addWidget(QLabel("Select asset pack:"))
 
+
         self.combo = QComboBox()
+        self.combo.setFixedWidth(280)
         self.combo.addItems(self.packitems)
         self.combo.setToolTip("An asset pack is a zip file,\nDownload of the standard assets can be done here.\nThey also can be downloaded manually\nand extracted with extract button below")
         self.combo.currentIndexChanged.connect(self.packNameChanged)
@@ -208,7 +211,12 @@ class DownLoadImport(QVBoxLayout):
         self.dlbutton.clicked.connect(self.downLoad)
         ilayout.addWidget(self.dlbutton)
 
-        userpath = QLabel("Destination user path for base: "  + self.env.basename + "\n"+ self.env.path_userdata)
+        userpath = QLabel() #"Destination user path for base: "  + self.env.basename + "\n"+ self.env.path_userdata)
+        metrics = QFontMetrics(userpath.font())
+        short_text = metrics.elidedText(self.env.path_userdata, Qt.ElideMiddle, 260)
+        userpath.setText("Destination user path for base: "  + self.env.basename + "\n"+ short_text)
+
+
         userpath.setToolTip("Files will be extracted to " + self.env.basename + " folders in "  + self.env.path_userdata)
         ilayout.addWidget(userpath)
 
@@ -247,9 +255,9 @@ class DownLoadImport(QVBoxLayout):
         self.clbutton=QPushButton("Clean Up")
         self.clbutton.clicked.connect(self.cleanUp)
         ilayout.addWidget(self.clbutton)
+        ilayout.addStretch()
         gb.setLayout(ilayout)
         layout.addWidget(gb)
-        layout.addStretch()
         self.packinserted()
         self.fnameinserted()
 

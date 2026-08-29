@@ -1,4 +1,27 @@
 {
+    "bonegroups": {
+        "upperwings": [
+	   "wing1.L", "wing2.L", "wing3.L", "wing4.L", "wing5.L", "wing6.L", "wing7.L", "wing8.L",
+	   "wingd1.L", "wingd2.L", "wingd3.L", "wingd4.L", "wingd5.L", "wingd6.L", "wingd7.L", "wingd8.L", "wingd9.L",
+	   "wing1.R", "wing2.R", "wing3.R", "wing4.R", "wing5.R", "wing6.R", "wing7.R", "wing8.R",
+	   "wingd1.R", "wingd2.R", "wingd3.R", "wingd4.R", "wingd5.R", "wingd6.R", "wingd7.R", "wingd8.R", "wingd9.R"
+	],
+        "lowerwings": [
+	    "wingbutterfly1.L", "wingbutterfly2.L", "wingbutterfly3.L",
+	    "wingbutterfly1.R", "wingbutterfly2.R", "wingbutterfly3.R"
+	],
+        "fishtail": [
+           "mermaid1", "mermaid2", "mermaid3", "mermaid4", "mermaid5", "mermaid5.L", "mermaid5.R",
+           "mermaid6", "mermaid6.L", "mermaid6.R", "mermaid6o.L", "mermaid6o.R",
+           "mermaid7", "mermaid7.L", "mermaid7.R", "mermaid7o.L", "mermaid7o.R",
+           "mermaid8.L", "mermaid8.R", "mermaid8o.L", "mermaid8o.R"
+        ],
+        "tail": [ "tail1", "tail2", "tail3", "tail4", "tail5", "tail6"],
+        "sideears": [ "elfear1.L", "elfear1.R", "elfear2.L", "elfear2.R", "elfear3.L", "elfear3.R", "elfear4.L", "elfear4.R"],
+        "topears": ["topear1.L", "topear1.R", "topear2.L", "topear2.R"],
+	"antenna": ["antenna1.L", "antenna1.R", "antenna2.L", "antenna2.R", "antenna3.L", "antenna3.R",
+		"antenna4.L", "antenna4.R", "antenna5.L", "antenna5.R"]
+    },
     "bones": {
         "antenna1.L": {
             "head": "antenna1.L____head",
@@ -1971,58 +1994,58 @@
 	    8100, 8100, 8100, 1412
         ],
         "breastbase.L____tail": [
-            8526, 8526, 8526, 1854
+            8100, 8100, 8100, 1412, 8442, 8442, 8442
         ],
         "breastbase.R____head": [
 	    8100, 1412, 1412, 1412
         ],
         "breastbase.R____tail": [
-            8526, 1854, 1854, 1854
+	    8100, 1412, 1412, 1412, 1770, 1770, 1770
         ],
 	"breast1.L____head": [
-            8526, 8526, 8526, 1854
+            8100, 8100, 8100, 1412, 8442, 8442, 8442
 	],
 	"breast1.L____tail": [
 	    8502
 	],
 	"breast1.R____head": [
-            8526, 1854, 1854, 1854
+	    8100, 1412, 1412, 1412, 1770, 1770, 1770
 	],
 	"breast1.R____tail": [
 	     1830
 	],
 	"breast2.L____head": [
-            8526, 8526, 8526, 1854
+            8100, 8100, 8100, 1412, 8442, 8442, 8442
 	],
 	"breast2.L____tail": [
 	    8498
 	],
 	"breast2.R____head": [
-            8526, 1854, 1854, 1854
+	    8100, 1412, 1412, 1412, 1770, 1770, 1770
 	],
 	"breast2.R____tail": [
 	    1826
 	],
 	"breast3.L____head": [
-            8526, 8526, 8526, 1854
+            8100, 8100, 8100, 1412, 8442, 8442, 8442
 	],
 	"breast3.L____tail": [
 	     8506
 	],
 	"breast3.R____head": [
-            8526, 1854, 1854, 1854
+	    8100, 1412, 1412, 1412, 1770, 1770, 1770
 	],
 	"breast3.R____tail": [
 	    1834
 	],
 	"breast4.L____head": [
-            8526, 8526, 8526, 1854
+            8100, 8100, 8100, 1412, 8442, 8442, 8442
 	],
 	"breast4.L____tail": [
 		8510
 	],
 	"breast4.R____head": [
-            8526, 1854, 1854, 1854
+	    8100, 1412, 1412, 1412, 1770, 1770, 1770
 	],
 	"breast4.R____tail": [
 	    1838
@@ -2132,7 +2155,7 @@
 	],
 	"elfear3.R____plane": [
 	   20540, 20541, 20549
-        ],
+	],
 	"elfear4.L____head": [
 	    20599
 	],
@@ -2151,47 +2174,18 @@
 	"elfear4.R____plane": [
 	   20549, 20550, 20558
 	],
-        "eye.L____head": [
-            13606,
-            13607,
-            13608,
-            13609,
-            13610,
-            13611,
-            13612,
-            13613
+	"eye.L____head": [
+	   13606, 13607, 13608, 13609, 13610, 13611, 13612, 13613
+	],
+	"eye.L____tail": [
+	   14086, 14087, 14088, 14089, 14090, 14091, 14092, 14093
         ],
-
-        "eye.L____tail": [
-            14086,
-            14087,
-            14088,
-            14089,
-            14090,
-            14091,
-            14092,
-            14093
-        ],
-        "eye.R____head": [
-            13614,
-            13615,
-            13616,
-            13617,
-            13618,
-            13619,
-            13620,
-            13621
-        ],
-        "eye.R____tail": [
-            14518,
-            14519,
-            14520,
-            14521,
-            14522,
-            14523,
-            14524,
-            14525
-        ],
+	"eye.R____head": [
+	   13614, 13615, 13616, 13617, 13618, 13619, 13620, 13621
+	],
+	"eye.R____tail": [
+	   14518, 14519, 14520, 14521, 14522, 14523, 14524, 14525
+	],
         "finger1-1.L____head": [
             14006,
             14007,
@@ -6784,7 +6778,7 @@
             "wrist.R____head"
         ]
     },
-    "version": 111,
+    "version": 112,
     "tags": ["facial bones", "detailed hands", "detailed feet", "wings", "fishtail", "tail", "fantasy"],
     "weights_file": "default_weights.mhw"
 }

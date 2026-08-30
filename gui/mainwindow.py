@@ -383,7 +383,7 @@ class MHMainWindow(QMainWindow):
             elem["func"].prepare()
             elem["menu"] = self.addActCallBack(self.animenu, elem["name"], self.anim_call)
 
-    def syncRepositories(self):
+    def syncRepositories(self, vis=False):
         """
         this function is used after e.g. a download took place or direct forced sync
         """
@@ -391,9 +391,16 @@ class MHMainWindow(QMainWindow):
         for elem in self.equipment:
             if elem["func"] is not None:
                 elem["func"].prepare(cache)
+                if vis:
+                    elem["func"].rescanFolder()
+
         self.charselect.prepare(cache)
+        if vis:
+           self.charselect.rescanFolder()
         for elem in self.animation:
             elem["func"].prepare(cache)
+            if vis:
+                elem["func"].rescanFolder()
         self.glob.baseClass.markAllAttachedAssets()
 
 

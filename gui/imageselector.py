@@ -851,6 +851,8 @@ class ImageSelection():
         - remove widgets
         - prepare new Repo (tags), send new repo and populate widget
         """
+        if self.picwidget is None:
+            return
         self.assetrepo = self.parent.glob.rescanAssets(self.type)
         self.picwidget.layout.removeAllWidgets()
         self.parent.glob.baseClass.markAllAttachedAssets()

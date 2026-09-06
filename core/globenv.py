@@ -38,6 +38,10 @@ class globalObjects():
         self.baseClass = None
         self.closing = False
 
+        self.openGLPreDraw = [] # pre and post draw functions
+        self.openGLPostDraw = []
+        self.drawFunction = {}
+
         # set default keys, this makes sure all keys are there
         #
         self.keyDict = {
@@ -172,6 +176,64 @@ class globalObjects():
             if self.env.mkdir(folder) is False:
                 return False
         return True
+
+    def _insertInDrawFunction(self, draw, listelem):
+        l = len(draw)
+        index = -1
+        for num, elem in enumerate(draw):
+            if listelem[1] > elem[1]:
+                index = num +1
+                break
+        if index == -1 or index >= l:
+            index = l
+            draw.append(listelem)
+        else:
+            draw.insert(index, listelem)
+
+    def _createDrawFunctionIndex(self):
+        self.drawFunction = {}
+        for cnt, elem in enumerate(self.openGLPreDraw):
+            self.drawFunction[elem[2]] =  {"priority": elem[1], "index": cnt }
+        for cnt, elem in enumerate(self.openGLPostDraw):
+            self.drawFunction[elem[2]] =  {"priority": elem[1], "index": cnt }
+        print (self.drawFunction)
+
+    def registerDrawFunction(self, toolname, drawfunction, priority=0):
+        """
+        register draw functions for openGL either before or after normal drawing
+        """
+        # avoid same name
+        #
+        if toolname in self.drawFunction:
+            self.env.logLine(1, toolname + " already registered")
+            return
+
+        self.openGLBlock  = True
+        if priority < 0:
+            self._insertInDrawFunction(self.openGLPreDraw, [drawfunction, priority, toolname])
+        else:
+            self._insertInDrawFunction(self.openGLPostDraw, [drawfunction, priority, toolname])
+        self.openGLBlock  = False
+        self._createDrawFunctionIndex()
+
+    def unregisterDrawFunction(self, toolname):
+        """
+        register draw functions for openGL either before or after normal drawing
+        """
+        # avoid same name
+        #
+        if toolname not in self.drawFunction:
+            self.env.logLine(2, toolname + " is not registered")
+            return
+
+        elem = self.drawFunction[toolname]
+        self.openGLBlock  = True
+        if elem["priority"] < 0:
+            self.openGLPreDraw.pop(elem["index"])
+        else:
+            self.openGLPostDraw.pop(elem["index"])
+        self.openGLBlock  = False
+        self._createDrawFunctionIndex()
 
 class cacheRepoEntry():
     def __init__(self, name, uuid, path, folder, obj_file, thumbfile, author, tag):

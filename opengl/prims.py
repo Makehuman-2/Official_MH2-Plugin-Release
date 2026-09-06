@@ -373,11 +373,10 @@ class VisLights():
             return False
 
         glbuffer = OpenGlBuffers()
-        glbuffer.GetBuffers(self.lampobj.gl_coord, self.lampobj.gl_norm, self.lampobj.gl_uvcoord)
-        boundingbox = self.lampobj.boundingBox()
+        glbuffer.GetObjBuffers(self.lampobj)
 
         for light in self.light.lights:
-            l = RenderedObject(self.parent, self.lampobj, boundingbox, glbuffer, pos=light["pos"])
+            l = RenderedObject(self.parent, self.lampobj, None, glbuffer, pos=light["pos"])
             self.obj.append(l)
         return True
 

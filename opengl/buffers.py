@@ -59,6 +59,11 @@ class OpenGlBuffers():
         self.NormalBuffer(norm)
         self.TexCoordBuffer(tpos)
 
+    def GetObjBuffers(self, obj):
+        self.VertexBuffer(obj.gl_coord)
+        self.NormalBuffer(obj.gl_norm)
+        self.TexCoordBuffer(obj.gl_uvcoord)
+
     def BindBuffersToShader(self, shader):
         """
         VAO, bind the position-buffer, normal-buffer and texture-coordinates to attribute 0, 1, 2

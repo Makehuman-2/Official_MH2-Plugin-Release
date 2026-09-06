@@ -337,6 +337,9 @@ class OpenGLView(QOpenGLWidget):
 
         showskel = self.objects_invisible is True and self.scene.hasSkeleton()
 
+        for predraw in self.glob.openGLPreDraw:
+            predraw[0]()
+
         if baseClass is not None:
             poseskel =  self.glob.baseClass.pose_skeleton
             if poseskel is None:
@@ -376,6 +379,9 @@ class OpenGLView(QOpenGLWidget):
 
         if self.marker is not None:
             self.marker.draw(proj_view_matrix)
+
+        for postdraw in self.glob.openGLPostDraw:
+            postdraw[0]()
         if self.glob.openGLWinUpdate:
             self.update()
 

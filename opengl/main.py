@@ -185,7 +185,7 @@ class OpenGLView(QOpenGLWidget):
         creates a rendered object and inserts it to a list according to zdepth and, if equal to bounding box
         """
         glbuffer = OpenGlBuffers()
-        glbuffer.GetBuffers(obj.gl_coord, obj.gl_norm, obj.gl_uvcoord)
+        glbuffer.GetObjBuffers(obj)
         self.buffers.append(glbuffer)
 
         boundingbox = obj.boundingBox()
@@ -338,7 +338,7 @@ class OpenGLView(QOpenGLWidget):
         showskel = self.objects_invisible is True and self.scene.hasSkeleton()
 
         for predraw in self.glob.openGLPreDraw:
-            predraw[0]()
+            predraw[0](self, proj_view_matrix, campos)
 
         if baseClass is not None:
             poseskel =  self.glob.baseClass.pose_skeleton
@@ -381,7 +381,7 @@ class OpenGLView(QOpenGLWidget):
             self.marker.draw(proj_view_matrix)
 
         for postdraw in self.glob.openGLPostDraw:
-            postdraw[0]()
+            postdraw[0](self, proj_view_matrix, campos)
         if self.glob.openGLWinUpdate:
             self.update()
 

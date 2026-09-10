@@ -33,9 +33,10 @@ class Material:
         self.tex_nomap = None
         self.tex_mrmap = None
         self.tex_emmap = None
+        self.tex_mask = None
         # reset keys
         for key in ["diffuseTexture", "normalmapTexture", "aomapTexture", "metallicRoughnessTexture",
-                "emissiveTexture", "sp_litsphereTexture"]:
+                "emissiveTexture", "sp_litsphereTexture", "maskTexture"]:
             if hasattr(self, key):
                 delattr(self, key)
         self.colorationOldColor = [1.0, 1.0, 1.0 ]
@@ -156,7 +157,7 @@ class Material:
             # * if commands make no sense, they will be skipped ... 
             # * check textures and set an absolut path
 
-            if key in ["diffuseTexture", "normalmapTexture", "aomapTexture", "metallicRoughnessTexture", "emissiveTexture"]:
+            if key in ["diffuseTexture", "normalmapTexture", "aomapTexture", "metallicRoughnessTexture", "emissiveTexture", "maskTexture"]:
                 abspath = self.isExistent(words[1])
                 if abspath is not None:
                     setattr (self, key, abspath)
@@ -329,6 +330,8 @@ class Material:
             self.roundColor(self.colorationColor)
             coloration = "colorationMethod " + str(self.colorationMethod) + \
                     f"\ncolorationColor  {self.colorationColor[0]} {self.colorationColor[1]} {self.colorationColor[2]}\n"
+            if hasattr(self, "maskTexture"):
+                coloration += "maskTexture " + self.textureRelName(self.maskTexture) + "\n"
         else:
             coloration = ""
 
@@ -442,12 +445,14 @@ backfaceCull {self.backfaceCull}
             return
         self.tex_diffuse.refresh() # reset
         image = self.tex_diffuse.getImage()
+        mask = self.tex_mask.getImage() if self.tex_mask else None      # get mask
+
         ie = ImageEdit(self.glob)
         if self.colorationMethod == 1:
-            ie.multColor(image, *self.colorationColor)
+            ie.multColor(image, *self.colorationColor, mask)
             self.tex_diffuse.refresh_image()
         elif self.colorationMethod ==2:
-            ie.greyToColor(image, *self.colorationColor)
+            ie.greyToColor(image, *self.colorationColor, mask)
             self.tex_diffuse.refresh_image()
 
         self.colorationOldColor = self.colorationColor.copy()
@@ -568,6 +573,16 @@ backfaceCull {self.backfaceCull}
 
         return white
 
+    def loadMaskMap(self, modify, obj):
+        if self.mapChanged('maskTexture', self.tex_mask):
+            return self.tex_mask.getTexture()
+
+        self.freeTexture("maskTexture")
+        if hasattr(self, 'maskTexture'):
+            self.tex_mask = MH_Texture(self.glob, obj=obj)
+            return self.tex_mask.load(self.maskTexture, modify=modify)
+
+        return None
 
     def setDiffuse(self, name, alternative, obj=None):
         """
@@ -637,6 +652,10 @@ backfaceCull {self.backfaceCull}
             if self.tex_emmap:
                 self.tex_emmap.delete()
                 self.tex_emmap = None
+        elif attrib == "maskTexture":
+            if self.tex_mask:
+                self.tex_mask.delete()
+                self.tex_mask = None
         elif attrib == "sp_litsphereTexture":
             if self.tex_litsphere:
                 self.tex_litsphere.delete()

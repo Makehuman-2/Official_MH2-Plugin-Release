@@ -113,7 +113,19 @@ class ImageEdit():
     def __init__(self, glob):
         self.glob = glob
 
-    def modifyToConstantHue(self, image, r, g, b):
+    def validMask(self, image, mask):
+        """
+        check if mask is valid (has same size and is not none)
+        """
+        if mask is None:
+            return False
+        return image.width() == mask.width() and image.height() == mask.height()
+
+    def modifyToConstantHue(self, image, r, g, b, mask=None):
+        """
+        create a color map from r g b with or without mask
+        """
+        usemask = self.validMask(image, mask)
         ptr = image.bits()
         mlen = image.width() * image.height()
         myarray = np.ndarray((mlen, 4), buffer=ptr, dtype=np.uint8)
@@ -122,7 +134,13 @@ class ImageEdit():
         qcol.setRgbF(r,g,b)
         hue = qcol.getHsv()[0]   # get "h" from given color in degrees
 
-        nrgb = myarray[:,:3].astype('float') / 256
+        if usemask:
+            maskptr = mask.bits()
+            maskarray = np.ndarray((mlen,), buffer=maskptr, dtype=np.uint8)
+            bool_mask = (maskarray > 127)
+            nrgb = myarray[bool_mask,:3].astype('float') / 256
+        else:
+            nrgb = myarray[:,:3].astype('float') / 256
 
         # keep value and saturation
         #
@@ -160,25 +178,46 @@ class ImageEdit():
             rgb = np.dstack((value, p, t))
         else:
             rgb = np.dstack((q, p, value))
-        myarray[:,:3] = rgb * 256
+
+        if usemask:
+            myarray[bool_mask,:3] = rgb * 256
+        else:
+            myarray[:,:3] = rgb * 256
 
 
-    def noColor(self, image):
-        self.modifyToConstantHue(image, 1.0, 1.0, 1.0)
+    def noColor(self, image, mask=None):
+        """
+        changes map to black & white
+        """
+        self.modifyToConstantHue(image, 1.0, 1.0, 1.0, mask=mask)
 
-
-    def multColor(self, image, r, g, b):
+    def multColor(self, image, r, g, b, mask=None):
+        """
+        multiplies existent color
+        """
+        usemask = self.validMask(image, mask)
         ptr = image.bits()
         mult = np.array([b, g, r, 1], dtype=np.float32)
         mlen = image.width() * image.height()
         myarray = np.ndarray((mlen, 4), buffer=ptr, dtype=np.uint8)
-        myarray2 = myarray.astype(np.float32, copy=True)
-        myarray2 *= mult
-        myarray[:] = myarray2.astype(np.uint8)[:]
+        if usemask:
+            maskptr = mask.bits()
+            maskarray = np.ndarray((mlen,), buffer=maskptr, dtype=np.uint8)
+            bool_mask = (maskarray > 127)
+            masked_pixels = myarray[bool_mask].astype(np.float32)
+            masked_pixels *= mult
+            myarray[bool_mask] = masked_pixels.astype(np.uint8)[:]
+        else:
+            myarray2 = myarray.astype(np.float32, copy=True)
+            myarray2 *= mult
+            myarray[:] = myarray2.astype(np.uint8)[:]
 
-    def greyToColor(self, image, r, g, b):
-        self.noColor(image)
-        self.multColor(image, r, g, b)
+    def greyToColor(self, image, r, g, b, mask=None):
+        """
+        converts image to grey color and then multiplies it
+        """
+        self.noColor(image, mask=mask)
+        self.multColor(image, r, g, b, mask=mask)
 
 class MH_Texture():
     def __init__(self, glob, textype="user", obj=None):

@@ -376,12 +376,12 @@ class OpenGLView(QOpenGLWidget):
         # draw all other objects which are in scene
         #
         self.scene.draw(proj_view_matrix, campos, offset, showskel)
+        for postdraw in self.glob.openGLPostDraw:
+            postdraw[0](self, proj_view_matrix, campos)
 
         if self.marker is not None:
             self.marker.draw(proj_view_matrix)
 
-        for postdraw in self.glob.openGLPostDraw:
-            postdraw[0](self, proj_view_matrix, campos)
         if self.glob.openGLWinUpdate:
             self.update()
 

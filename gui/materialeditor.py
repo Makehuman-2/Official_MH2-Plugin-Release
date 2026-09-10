@@ -309,6 +309,7 @@ class MHMaterialEditor(QWidget):
         hlayout.addLayout(vlayout)
 
         hlayout.addWidget(self.colorwheel)
+
         gb.setLayout(hlayout)
 
         t = TextureBox (self, self.object, "Base color / base texture", "diffuseTexture", altcolor="diffuseColor")
@@ -316,6 +317,8 @@ class MHMaterialEditor(QWidget):
         self.TBoxes.append(t)
 
         slayout.addWidget(gb) # add coloration
+        maskbox = TextureBox (self, self.object, "Coloration mask", "maskTexture")
+        slayout.addWidget(maskbox)
 
         t = TextureBox (self, self.object, "Normalmap", "normalmapTexture", self.factors[3])
         slayout.addWidget(t)
@@ -336,6 +339,8 @@ class MHMaterialEditor(QWidget):
         t = TextureBox (self, self.object, "Litsphere/Matcap", "sp_litsphereTexture", self.factors[5])
         slayout.addWidget(t)
         self.TBoxes.append(t)
+
+        self.TBoxes.append(maskbox)
 
         # glass shader
         #

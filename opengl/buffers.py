@@ -162,6 +162,7 @@ class RenderedObject:
         """
         self.material = material
         self.texture = self.material.loadDiffuse(modify, self.proxy)
+        self.material.loadMaskMap(modify, self.proxy)
         self.material.colorate()
 
         if material.shader == "litsphere":

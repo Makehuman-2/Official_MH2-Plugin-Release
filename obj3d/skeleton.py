@@ -30,6 +30,10 @@ class skeleton:
         self.mesh = self.glob.baseClass.baseMesh
         self.filename = None
 
+        self.bonegroups = {}
+        self.bonesWithWeights = {} # used for skeleton reduction
+        self.is_reduced = False
+
     def __str__(self):
         return "Skeleton: " + self.name
 
@@ -102,6 +106,11 @@ class skeleton:
             self.env.logLine(1, "Missing root bone (bone without parent) in " + path)
             return False
 
+        # get bonegroups
+        #
+        if "bonegroups" in json:
+            self.bonegroups = json["bonegroups"]
+
         # read weights (either default or own)
         #
         weightname = json["weights_file"] if "weights_file" in json else "default_weights.mhw"
@@ -139,12 +148,20 @@ class skeleton:
         for bone in  self.bones:
             print (self.bones[bone])
         """
+
         # in case it cannot calculate inverse binding, just say it here and avoid skeleton
         #
         if self.calcRestMat() is False:
             return False
         self.filename = path
         return True
+
+    def reloadSkeleton(self):
+        if self.filename and self.is_reduced:
+            self.env.logLine(2, "reloading skeleton: " + self.name)
+            fname = self.filename   # filename is set to None in newSkeleton
+            self.newSkeleton()
+            self.loadJSON(fname)
 
     def setOffset(self, position):
         self.offset.setX(position[0])
@@ -242,10 +259,12 @@ class skeleton:
         meshCoords = np.ones((l, 4), dtype=np.float32)
         meshCoords[:,:3] = np.reshape(mesh.gl_coord_w, (l,3))
 
-        for bname in vmapping:
+        for bname, mapping in vmapping.items():
+            if bname not in self.bones:
+                continue
             bone = self.bones[bname]
 
-            verts, weights = vmapping[bname]
+            verts, weights = mapping
             vec = np.dot(bone.matPoseVerts, meshCoords[verts].transpose())
             vec *= weights
             coords[verts] += vec.transpose()[:,:3]
@@ -253,6 +272,58 @@ class skeleton:
         m = coords.flatten()
         mesh.gl_coord[:mesh.n_origverts*3] = m[:]
         mesh.overflowCorrection(mesh.gl_coord)
+
+    def noWeightsBasemesh(self):
+        self.bonesWithWeights = {}
+        self.noWeights(self.mesh, self.bWeights)
+
+    def noWeights(self, mesh, bWeights):
+        vmapping = bWeights.bWeights
+        hvis = mesh.highestVisibleVert()
+        for bname, mapping in vmapping.items():
+            cnt = np.count_nonzero(mapping[0] <= hvis)
+            if cnt > 0:
+                if bname in self.bonesWithWeights:
+                    self.bonesWithWeights[bname] += cnt
+                else:
+                    self.bonesWithWeights[bname] = cnt
+
+    def unusedGroups(self):
+        unused = []
+        for name, group in self.bonegroups.items():
+            used = False
+            for bone in group:
+                if bone in self.bonesWithWeights:
+                    used = True
+            if not used:
+                unused.append(name)
+        return unused
+
+    def reduceSkeleton(self):
+        self.env.logLine(2, "reducing skeleton: " + self.name)
+        self.noWeightsBasemesh()
+        for elem in self.glob.baseClass.attachedAssets:
+            if elem.bWeights:
+                self.noWeights(elem.obj, elem.bWeights)
+        unused = self.unusedGroups()
+        for name, group in self.bonegroups.items():
+            if name in unused:
+                self.is_reduced = True
+                for bone in group:
+                    del self.bones[bone]
+
+    def getVirtualBonePosition(self, name, posemode):
+        binfo = self.glob.baseClass.baseInfo
+        if "virtualbones" in binfo:
+            virtual = binfo["virtualbones"]
+            if name in virtual:
+                pbone = virtual[name]
+                if pbone in self.bones:
+                    bone = self.bones[pbone]
+                    coord = bone.posetailPos if posemode else bone.tailPos
+                    return coord, bone
+
+        return None, None
 
 
     def restPose(self, bones_only=False):

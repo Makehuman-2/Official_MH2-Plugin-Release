@@ -10,7 +10,7 @@
 from PySide6.QtWidgets import (
     QAbstractItemView, QDialogButtonBox, QFrame, QGroupBox, QHBoxLayout,
     QLabel, QListWidget, QMainWindow, QMdiArea, QMdiSubWindow,
-    QMessageBox, QPushButton, QScrollArea, QSizePolicy, QSplitter,
+    QMessageBox, QScrollArea, QSizePolicy, QSplitter,
     QVBoxLayout, QWidget
 )
 
@@ -29,7 +29,7 @@ from gui.fileactions import BaseSelect, SaveMHMForm
 from gui.downloads import DownLoadImport
 from gui.playtimer import MHPlayTimer
 from gui.exporter import ExportLeftPanel, ExportRightPanel, ExporterValues
-from gui.poseactions import AnimPlayer, AnimPlayerValues, AnimMode
+from gui.poseactions import AnimPlayer, AnimPlayerValues, AnimMode, AnimSkeleton
 from gui.poseeditor import AnimExpressionEdit, AnimPoseEdit
 from gui.slider import ScaleComboArray
 from gui.imageselector import ImageSelection
@@ -663,6 +663,8 @@ class MHMainWindow(QMainWindow):
             if self.category_mode == 0:
                 self.leftColumn.setTitle("Rigs :: filter")
                 layout = self.animation[self.category_mode]["func"].leftPanel()
+                skel = AnimSkeleton(self.glob, layout)
+                layout.addWidget(skel)
                 self.LeftBox.addLayout(layout)
             elif self.category_mode == 1:
                 self.leftColumn.setTitle("Poses :: filter")

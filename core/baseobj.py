@@ -277,6 +277,7 @@ class baseClass():
         #
         if self.pose_skeleton is not None:
             self.pose_skeleton.newGeometry()
+            self.pose_skeleton.reloadSkeleton()
 
         # finally mark MHM as used
         #
@@ -669,6 +670,13 @@ class baseClass():
         self.glob.openGLWindow.scene.prepareSkeleton()
         self.glob.openGLWindow.Tweak()
         self.glob.midColumn.setSizeInfo()
+
+    def getVirtualBonePosition(self, name):
+        skeleton = self.pose_skeleton if self.in_posemode else self.default_skeleton
+        if skeleton:
+            return skeleton.getVirtualBonePosition(name, self.in_posemode)
+        else:
+            return None, None
 
     def hasPoses(self):
         """

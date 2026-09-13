@@ -61,5 +61,13 @@
 		"macrodetails/African": 0.33,
 		"breast/BreastSize": 0.5,
 		"breast/BreastFirmness": 0.5
-	}
+	},
+	"virtualbones": {
+                "head": "head",
+                "hand_L": "wrist.L",
+                "hand_R": "wrist.R",
+                "foot_L": "foot.L",
+                "foot_R": "foot.R",
+                "spine_03": "spine03"
+        }
 }

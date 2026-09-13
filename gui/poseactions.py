@@ -4,6 +4,7 @@
 
     Classes:
     * AnimMode
+    * AnimSkeleton
     * AnimPlayerValues
     * AnimPlayer
 """
@@ -35,6 +36,33 @@ class AnimMode():
     def leave(self):
         self.bc.setStandardMode()
         self.glob.midColumn.animViews(False)
+
+class AnimSkeleton(QGroupBox):
+    def __init__(self, glob, layout):
+        self.glob = glob
+
+        bg = 0
+        if self.glob.baseClass.pose_skeleton:
+            bg = len(self.glob.baseClass.pose_skeleton.bonegroups)
+        if bg > 0:
+            text = "Skeleton reduction works for skeletons, which support helpers by bones.\nThis skeleton supports " + str(bg) + " additional bonegroups."
+        else:
+            text = "Skeleton reduction deactivated, no additional bonegroups."
+
+        super().__init__()
+        self.setTitle("Functions")
+        self.setObjectName("subwindow")
+        glayout = QGridLayout()
+        button = IconButton(0, os.path.join(self.glob.env.path_sysicon, "minus.png"), text, self.reduceSkeleton)
+        button.setEnabled(bg > 0)
+        glayout.addWidget(button, 0, 0, 1, 1)
+        glayout.addWidget(QLabel("skeleton reduction"), 0, 1, 1, 1)
+        self.setLayout(glayout)
+
+    def reduceSkeleton(self):
+        if self.glob.baseClass.pose_skeleton:
+            self.glob.baseClass.pose_skeleton.reduceSkeleton()
+            self.glob.openGLWindow.scene.prepareSkeleton(self.glob.baseClass.in_posemode)
 
 class AnimPlayerValues():
     """

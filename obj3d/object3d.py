@@ -302,6 +302,24 @@ class object3d:
 
         return numind, numfaces
 
+    def highestVisibleVert(self):
+        if self.visible is None:
+            return self.n_origverts
+
+        highest = 0
+        for npelem in self.npGrpNames:
+            elem = npelem.decode("utf-8")
+            if elem not in self.visible:
+                continue
+            group = self.loadedgroups[elem]
+            for face in group["v"]:
+                for vert in face:
+                    if vert < self.n_origverts:
+                        if vert > highest:
+                            highest = vert
+
+        return highest
+
     def fillFaceBuffers(self, vertsperface, faceverts, mask, overrideignore=False):
         """
         fill vertsperface, faceverts buffer

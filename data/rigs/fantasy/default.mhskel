@@ -20,7 +20,8 @@
         "sideears": [ "elfear1.L", "elfear1.R", "elfear2.L", "elfear2.R", "elfear3.L", "elfear3.R", "elfear4.L", "elfear4.R"],
         "topears": ["topear1.L", "topear1.R", "topear2.L", "topear2.R"],
 	"antenna": ["antenna1.L", "antenna1.R", "antenna2.L", "antenna2.R", "antenna3.L", "antenna3.R",
-		"antenna4.L", "antenna4.R", "antenna5.L", "antenna5.R"]
+		"antenna4.L", "antenna4.R", "antenna5.L", "antenna5.R"],
+	"penis": ["penis1", "penis2", "penis3", "testicle1.L", "testicle2.L", "testicle1.R", "testicle2.R"]
     },
     "bones": {
         "antenna1.L": {

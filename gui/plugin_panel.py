@@ -302,7 +302,7 @@ class CommunityPanel(QtWidgets.QWidget):
             for hook_name in ["unload_extension", "shutdown_extension"]:
                 if hasattr(module, hook_name):
                     try:
-                        getattr(module, hook_name)()
+                        getattr(module, hook_name)(self.glob)
                         break
                     except Exception as e:
                         self.env.logLine(1, f"module cleanup, trace failure on {name}: {e}")

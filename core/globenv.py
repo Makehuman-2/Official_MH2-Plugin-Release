@@ -41,6 +41,7 @@ class globalObjects():
         self.openGLPreDraw = [] # pre and post draw functions
         self.openGLPostDraw = []
         self.drawFunction = {}
+        self.pluginRepo = {}
 
         # set default keys, this makes sure all keys are there
         #

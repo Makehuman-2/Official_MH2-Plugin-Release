@@ -279,7 +279,8 @@ class CommunityPanel(QtWidgets.QWidget):
                     self.env.logLine(1, f"Successfully loaded plugin: {raw_module_name}")
                 except Exception as e:
                     self.last_error = f"Failed compiling script path {raw_module_name}: {e}"
-                    return False
+                    self.env.logLine(1, self.last_error)
+
         return True
 
     def toggle_community(self, name, state):

@@ -1,6 +1,6 @@
 """
     License information: data/licenses/makehuman_license.txt
-    Author: black-punkduck, Elvaerwyn_MH2 Makehuman 2 2026 V1.1
+    Author: black-punkduck, Elvaerwyn_MH2 Makehuman 2 2026 V1.2
 
     The mainwindow containing menus, left, center and right column
 
@@ -201,16 +201,18 @@ class MHMainWindow(QMainWindow):
         def display_embedded_panel():
             """
             Dynamic Show/Hide Toggle Loop.
-            Only applies window focus flags when opening to prevent thread freezes!
+            Natively toggles the outer layout container column to completely prevent frozen blank panels!
             """
-            # If the panel is already open on screen, hide it cleanly and exit!
             if self.community_extension_panel.isVisible():
                 self.community_extension_panel.hide()
-                print("[Menu Toggle] Community Extensions panel safely hidden.")
+                if self.visRightColumn:
+                    self.visRightColumn.setVisible(False)
+                print("[Menu Toggle] Community Extensions panel and outer column framework safely collapsed.")
                 return 
                 
-            # If it is currently hidden, proceed with your original mounting logic:
+            # If it is currently hidden, proceed with mounting and displaying the layout:
             if self.visRightColumn:
+                self.visRightColumn.setVisible(True)
                 self.visRightColumn.show()
                 
             if self.community_extension_panel.parent() is None:
@@ -219,10 +221,7 @@ class MHMainWindow(QMainWindow):
                 elif self.ToolBox and getattr(self.ToolBox, 'layout', None) and self.ToolBox.layout():
                     self.ToolBox.layout().addWidget(self.community_extension_panel)
 
-            # =====================================================================
-            # >>> CONDITIONAL FOCUS LOCK (STOPS INTENSE THREAD FREEZES) >>>
-            # =====================================================================
-            # We move these lines here so they ONLY fire when showing the panel!
+            # Conditional visibility activation maps focus back to your extensions tree smoothly
             self.community_extension_panel.show()
             self.community_extension_panel.raise_()
             self.community_extension_panel.setFocus()

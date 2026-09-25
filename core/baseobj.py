@@ -607,7 +607,7 @@ class baseClass():
         return attach
 
 
-    def addAndDisplayAsset(self, path, eqtype, multi):
+    def addAndDisplayAsset(self, path, eqtype, multi, materialpath=None, materialsource=None):
         """
         attach an asset and propagate to OpenGL
         """
@@ -622,7 +622,7 @@ class baseClass():
                     self.env.logLine(2, "Unconnect asset: " + elem.filename)
                     self.delAsset(elem.filename)
 
-        asset = self.addAsset(path, eqtype)
+        asset = self.addAsset(path, eqtype, materialpath=materialpath, materialsource=materialsource)
         if asset is not None:
             asset.obj.approxToBasemesh(asset, self.baseMesh)
             self.glob.openGLWindow.createObject(asset.obj)

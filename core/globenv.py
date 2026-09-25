@@ -378,8 +378,7 @@ class programInfo():
         change a name to lower case, only allow a-z 0-9 - + _ =
         used to create filenames compatible for Windows and Linux
         """
-        path = path.lower()
-        return re.sub(r'[^a-z0-9_+=-]', "_", path)
+        return "".join([c for c in path.lower() if c.isalnum() or c in ("+", "_", "-", "=")])
 
     def developmentPyCacheCleanup(self):
         purged_paths = []

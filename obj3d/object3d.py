@@ -788,7 +788,6 @@ class object3d:
         """
         reset to original mesh + add all changes of non-macrotargets
         """
-        print ("+++ reset mesh and add non macro targets")
         self.resetMesh()
         targets = self.glob.Targets.modelling_targets
         for target in targets:
@@ -805,7 +804,6 @@ class object3d:
         """
         copy original mesh + add all changes of non-macrotargets
         """
-        print ("+++ Prepare Buffer")
         self.gl_coord_mn =  self.gl_coord.copy()
         self.gl_coord_mm = np.zeros_like(self.gl_coord)
 
@@ -828,7 +826,6 @@ class object3d:
         after changing a macro it will be added
         make sure to write in same buffer (out will avoid to get a new one)
         """
-        print ("+++ Add macro to character")
         np.add(self.gl_coord_mm, self.gl_coord_mn, out=self.gl_coord)  
         self.overflowCorrection(self.gl_coord)
         self.gl_coord_mm = np.zeros_like(self.gl_coord)

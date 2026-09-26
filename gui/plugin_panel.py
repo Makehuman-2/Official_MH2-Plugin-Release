@@ -27,6 +27,7 @@ class CommunityPanel(QtWidgets.QWidget):
         # Tracking dictionaries for both architectures
         self.registered_official = {}    # Holds the official TOML entry points
         self.registered_community = {}   # Holds the raw community .py files
+        self.official_modules = {}       # Holds the official modules (point to importlib modules)
         self.active_extensions = {}      # Tracks currently active modules
         self.checkboxes = {}             # Tracks visible UI toggles
 
@@ -160,16 +161,32 @@ class CommunityPanel(QtWidgets.QWidget):
 
                 # Reconstruct mock entry point objects to sync with your loader mechanics 
                 for name, value in entry_points_block.items():
-                    module_path, func_name = value.split(":")
+
+                    # these are the defaults if no name is given
+                    #
+                    func_name = "load_extension"
+                    ufunc_name = "unload_extension"
+
+                    if ":" in value:
+                        module_path, func_name = value.split(":")
+                        if "/" in func_name:
+                            func_name, ufunc_name = func_name.split("/")
+                    else:
+                        module_path = value
                     
-                    def local_load(m_path=module_path, f_name=func_name):
+                    def local_load(m_path=module_path, f_name=func_name, name=name):
+
+                        # load module and keep it in the named array for later unload
+                        #
                         mod = importlib.import_module(m_path)
+                        self.official_modules[name] = mod
                         return getattr(mod, f_name)
-                            
+
                     mock_ep = SimpleNamespace(
                         name=name,
                         value=value,
-                        load=local_load
+                        load=local_load,
+                        unload=ufunc_name
                     )
                     discovered.append(mock_ep)
 
@@ -193,17 +210,23 @@ class CommunityPanel(QtWidgets.QWidget):
         return True
 
     def toggle_official(self, entry_point, name, state):
-        """Loads official code modules into memory when enabled."""
-        if state == 2 or state == QtCore.Qt.Checked:
+        """Loads and unloads official code modules into memory when enabled."""
+        if state == QtCore.Qt.Checked:
             try:
-                init_func = entry_point.load()
+                init_func = entry_point.load(name=name)
                 res = init_func(self.app, self.glob)
                 if res:
                     self.active_extensions[name] = res
-                self.env.logLine(1, f"Core Extension Hooked: {name}")
+                self.env.logLine(1, f"core extension hooked: {name}")
             except Exception as e:
-                self.env.logLine(1, f"Error, core feature execution failure on {name}: {e}")
+                self.env.logLine(1, f"Error, core extension hooking {name} failed: {e}")
         else:
+            module = self.official_modules[name]
+            try:
+                getattr(module, entry_point.unload)(self.glob)
+                self.env.logLine(1, f"core extension unhooked: {name}")
+            except Exception as e:
+                self.env.logLine(1, f"Error, core extension unhooking {name} failed: {e}")
             self.active_extensions.pop(name, None)
 
     # =========================================================================
@@ -288,8 +311,7 @@ class CommunityPanel(QtWidgets.QWidget):
         module = self.registered_community.get(name)
         if not module:
             return
-            
-        if state == 2 or state == QtCore.Qt.Checked:
+        if state == QtCore.Qt.Checked:
             for hook_name in ["load_extension", "initialize_extension"]:
                 if hasattr(module, hook_name):
                     try:
@@ -322,11 +344,12 @@ class CommunityPanel(QtWidgets.QWidget):
         checkbox.stateChanged.connect(toggle_callback)
         self.scroll_layout.addWidget(checkbox)
         self.checkboxes[internal_id] = checkbox
+
     # ================
     # DROPDOWN TOGGLE 
     # ================
     def hideEvent(self, event):
-        """Triggers automatically when the core loop hides the inner panel contents."""
+        """Triggers automatically when the core loop hides the inner panel contents (like opening another menu)."""
         super().hideEvent(event)
         
         # 1. Travel up the widget tree to find the structural QDockWidget container
@@ -341,18 +364,14 @@ class CommunityPanel(QtWidgets.QWidget):
                 current_node.close()
                 
                 # Alert the main window layout manager to unregister the frame and collapse the empty space
-                if self.glob and hasattr(self.glob, 'MainWindow') and self.glob.MainWindow:
-                    try:
-                        self.glob.MainWindow.removeDockWidget(current_node)
-                    except Exception:
-                        pass
+                try:
+                    self.glob.MainWindow.removeDockWidget(current_node)
+                except Exception:
+                    pass
                 break
             current_node = current_node.parentWidget()
 
-        # 2. Tell the shared OpenGL canvas viewport to repaint over the freed space
-        if self.glob and getattr(self.glob, 'openGLWindow', None):
-            if hasattr(self.glob.openGLWindow, 'update'):
-                self.glob.openGLWindow.update()
+        self.glob.openGLWindow.update()
 
     # =========================================================================
     # EXTENSION HOT-REFRESH ENGINE (V1.3 - SEQUENTIAL PIPELINE CLEANUP)
@@ -374,11 +393,10 @@ class CommunityPanel(QtWidgets.QWidget):
         # 2. Clear out your tracking dictionary lookup states completely
         self.registered_official.clear()
         self.registered_community.clear()
-        self.active_extensions.clear()
         self.checkboxes.clear()
 
         # 3. Destroy all visible checkbox row layouts inside the layout tree
-        # We save index 0 to protect your green status_label text widget frame!
+        #
         while self.scroll_layout.count() > 1:
             item = self.scroll_layout.takeAt(1)
             if item.widget():
@@ -387,5 +405,12 @@ class CommunityPanel(QtWidgets.QWidget):
         # 4. Process event ticks to clear UI memory blocks and re-run your scanning methods
         QtCore.QCoreApplication.processEvents()
         self.load_all_extensions_sequential()
+
+        # 5. reset checkboxes to checked which are currently active
+        for key, value in self.checkboxes.items():
+            if key in self.active_extensions:
+                value.blockSignals(True)
+                value.setChecked(True)
+                value.blockSignals(False)
         self.env.logLine(1, "Refresh: Hot-refresh complete. New folders mapped successfully.")
         

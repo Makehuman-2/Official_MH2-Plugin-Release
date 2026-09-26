@@ -32,7 +32,7 @@ class MacroTree:
                 return
 
     def __str__(self):
-        return (str(self.names) + " " + str(self.values))
+        return str(self.names) + " " + str(self.values)
 
 
 class Modelling(ScaleComboItem):
@@ -58,7 +58,7 @@ class Modelling(ScaleComboItem):
         self.pattern = "None"
 
     def __str__(self):
-        return (self.name + ": " + str(self.incr) + " | " + str(self.decr))
+        return self.name + ": " + str(self.incr) + " | " + str(self.decr)
 
     def memInfo(self):
         if self.barycentric:
@@ -75,7 +75,7 @@ class Modelling(ScaleComboItem):
             li = len(self.incr.verts) if self.incr else 0
             ld = len(self.decr.verts) if self.decr else 0
             t = [self.name, str(self.incr), li, str(self.decr), ld, self.pattern, self.value]
-        return (t)
+        return t
 
     def setFromDict(self, t, targetpath, bintargets):
         if "tip" in t:
@@ -157,7 +157,7 @@ class Modelling(ScaleComboItem):
         x =eval(self.formula)
         self.virtual_value = x
         l = self.formatText.format(x)
-        return(l)
+        return l
 
     def textSlot(self, descr):
         num = descr["slot"]
@@ -177,18 +177,18 @@ class Modelling(ScaleComboItem):
         if self.barycentric:
             self.pattern = self.barycentric
             self.opposite = False
-            return (self.pattern)
+            return self.pattern
         if self.macro:
             self.pattern = self.macro
             self.opposite = False
-            return (self.pattern)
+            return self.pattern
 
         d = str(self.decr)
         i = str(self.incr)
 
         self.pattern = "None"
         if i == "None":
-            return (self.pattern)
+            return self.pattern
 
         # use target opposites to find pattern (from base.json)
         #
@@ -205,7 +205,7 @@ class Modelling(ScaleComboItem):
 
         if user == 1:
             self.pattern = "custom/" + self.pattern
-        return (self.pattern)
+        return self.pattern
 
     def displayMeasurement(self, new=False):
         val, coords = self.obj.baseMesh.getMeasure(self.measure)
@@ -218,7 +218,7 @@ class Modelling(ScaleComboItem):
 
     def initialize(self):
         factor = self.value / 100
-        print("init  " + self.name)
+        # print("init  " + self.name)
         self.glob.openGLWindow.delMarker()
         if self.macro is not None:
             self.obj.baseMesh.resetToNonMacroTargets()
@@ -428,7 +428,7 @@ class Modelling(ScaleComboItem):
                     self.obj.updateByTarget(factor, key.decr, key.incr)
                     key.value = self.value
                 else:
-                    print ("Target missing")
+                    self.env.logLine (2, "Missing target:" + str(self.sym))
             if self.measure is not None:
                 self.displayMeasurement()
             self.postChange()
@@ -450,7 +450,7 @@ class Morphtarget:
         self.env  = env
 
     def __str__(self):
-        return (self.name)
+        return self.name
 
     def loadTargetData(self, path, bintargets=None):
         """
@@ -512,20 +512,20 @@ class Targets:
 
 
     def __str__(self):
-        return ("Target-Collection: " + str(self.collection))
+        return "Target-Collection: " + str(self.collection)
 
     def getSym(self):
         return self.symmetry
 
     def setSym(self, value):
-        print ("Set symmetry " + str(value))
+        self.env.logLine (2, "Set symmetry " + str(value))
         self.symmetry = value
 
     def makeSym(self, RtoL):
         if RtoL:
-            print ("Make symmetry RToL")
+            self.env.logLine (2, "Make symmetry RToL")
         else:
-            print ("Make symmetry LToR")
+            self.env.logLine (2, "Make symmetry LToR")
 
         for elem in self.modelling_targets:
             if elem.sym is not None and elem.isRSide is RtoL:
@@ -589,14 +589,14 @@ class Targets:
 
         if targetjson is None:
             self.env.logLine(1, "User only modelling.json")
-            return (userjson)
+            return userjson
 
         if userjson is not None:
             self.env.logLine(1, "Append user modelling.json")
             for elem in userjson:
                 targetjson[elem] = userjson[elem]
 
-        return (targetjson)
+        return targetjson
 
     def createTarget(self, name, t):
         """

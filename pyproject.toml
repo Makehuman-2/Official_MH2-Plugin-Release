@@ -7,4 +7,7 @@ dependencies = ["PySide6"]
 prop_panel = "mh2_official_tools.prop_panel:initialize_extension"
 # THE SYSTEM ALIGNMENT CURE
 # This registers your studios directly into your custom official entry points loop!
-make_outfit = "mh2_official_tools.make_outfit:initialize_extension"
+# 
+make_outfit = "mh2_official_tools.make_outfit:load_extension/unload_extension"
+#
+# or make_outfit = "mh2_official_tools.make_outfit" (since load_extension and unload_extension) are defaults when not supplied

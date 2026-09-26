@@ -207,7 +207,7 @@ class MHMainWindow(QMainWindow):
                 self.community_extension_panel.hide()
                 if self.visRightColumn:
                     self.visRightColumn.setVisible(False)
-                print("[Menu Toggle] Community Extensions panel and outer column framework safely collapsed.")
+                self.env.logLine(2, "Menu Toggle: Community Extensions panel and outer column framework safely collapsed.")
                 return 
                 
             # If it is currently hidden, proceed with mounting and displaying the layout:
@@ -225,7 +225,7 @@ class MHMainWindow(QMainWindow):
             self.community_extension_panel.show()
             self.community_extension_panel.raise_()
             self.community_extension_panel.setFocus()
-            print("[Menu Toggle] Community Extensions panel safely displayed and focused.")
+            self.env.logLine(2, "Menu Toggle: Community Extensions panel safely displayed and focused.")
 
 
         # 3. Connect the Settings menu to pull focus to the embedded layout

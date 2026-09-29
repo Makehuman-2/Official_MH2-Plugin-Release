@@ -211,7 +211,7 @@ class CommunityPanel(QtWidgets.QWidget):
 
     def toggle_official(self, entry_point, name, state):
         """Loads and unloads official code modules into memory when enabled."""
-        if state == QtCore.Qt.Checked:
+        if state == 2:
             try:
                 init_func = entry_point.load(name=name)
                 res = init_func(self.app, self.glob)
@@ -311,7 +311,7 @@ class CommunityPanel(QtWidgets.QWidget):
         module = self.registered_community.get(name)
         if not module:
             return
-        if state == QtCore.Qt.Checked:
+        if state == 2:
             for hook_name in ["load_extension", "initialize_extension"]:
                 if hasattr(module, hook_name):
                     try:

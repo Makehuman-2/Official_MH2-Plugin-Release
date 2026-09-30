@@ -223,6 +223,8 @@ class attachedAsset:
         if self.material is not None:
             self.standard_material = self.material
             self.material = os.path.normpath(os.path.join(os.path.dirname(filename), self.material))
+            if self.env.osindex == 0:
+                self.material = os.path.normcase(self.material).replace("\\", "/")
         else:
             self.standard_material = ""
 
@@ -326,6 +328,8 @@ class attachedAsset:
         if self.material is not None:
             self.standard_material = self.material
             self.material = os.path.normpath(os.path.join(os.path.dirname(path), self.material))
+            if self.env.osindex == 0:
+                self.material = os.path.normcase(self.material).replace("\\", "/")
         else:
             self.standard_material = ""
 

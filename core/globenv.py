@@ -115,7 +115,7 @@ class globalObjects():
             else:
                 objectnames.append(key)
                 tags = (match[row[1]] if row[1] in match else row[7]).split("|")
-                self.cachedInfo.append(cacheRepoEntry(row[0], row[1], row[2], row[3], row[4], row[5], row[6], tags))
+                self.cachedInfo.append(cacheRepoEntry(self.env, row[0], row[1], row[2], row[3], row[4], row[5], row[6], tags))
 
     def noAssetsUsed(self):
         for elem in self.cachedInfo:
@@ -237,27 +237,36 @@ class globalObjects():
         self._createDrawFunctionIndex()
 
 class cacheRepoEntry():
-    def __init__(self, name, uuid, path, folder, obj_file, thumbfile, author, tag):
+    """
+    cache repo entry contains data from sqllite repository
+    all paths will always be in URL nomenclature
+    """
+    def __init__(self, env, name, uuid, path, folder, obj_file, thumbfile, author, tag):
         self.name = name
         self.uuid = uuid
         self.folder = folder
-        self.path = path
         self.thumbfile = thumbfile
         self.author = author
         self.tag = tag
         self.used = False
 
+        # Windows: convert all to lowercase and replace backslash
+        if env.osindex == 0:
+            self.path = os.path.normcase(path).replace("\\", "/")
+        else:
+            self.path = path
+
         if obj_file is not None:
-            self.obj_file = os.path.join(os.path.dirname(path), obj_file)
+            self.obj_file = os.path.dirname(self.path) + "/" + obj_file
         else:
             self.obj_file = None
 
         # calculate expected mhbin
         #
-        if path.endswith(".mhclo"):
-            self.mhbin_file = path[:-5] + "mhbin"
+        if self.path.endswith(".mhclo"):
+            self.mhbin_file = self.path[:-5] + "mhbin"
         else:
-            self.mhbin_file = path + ".mhbin"
+            self.mhbin_file = self.path + ".mhbin"
 
     def __str__(self):
         return dumper(self)
@@ -373,12 +382,16 @@ class programInfo():
             path = os.path.normcase(path)
         return os.path.expanduser(os.path.normpath(path).replace("\\", "/"))
 
-    def normalizeName(self, path: str) -> str:
+    def normalizeName(self, path: str, lower=True) -> str:
         """
         change a name to lower case, only allow a-z 0-9 - + _ =
         used to create filenames compatible for Windows and Linux
         """
-        return "".join([c for c in path.lower() if c.isalnum() or c in ("+", "_", "-", "=")])
+        path = "".join([c for c in path if c.isalnum() or c in ("+", "_", "-", "=")])
+        if lower:
+            return path.lower()
+        else:
+            return path
 
     def developmentPyCacheCleanup(self):
         purged_paths = []
@@ -474,9 +487,13 @@ class programInfo():
         returns True (all okay) or False (system cannot start)
         """
 
-        # system paths
+        # system paths, normalized
         #
-        self.path_sysdata = os.path.join(self.path_sys,  "data")
+        if self.osindex == 0:
+            self.path_sysdata = os.path.normcase(self.path_sys).replace("\\", "/") + "/data"
+        else:
+            self.path_sysdata = os.path.join(self.path_sys,  "data")
+
         self.path_sysicon = os.path.join(self.path_sysdata, "icons")
         self.path_version = os.path.join(self.path_sysdata, "makehuman2_version.json")
         self.path_sysconf = os.path.join(self.path_sysdata, "makehuman2_default.conf")
@@ -540,9 +557,12 @@ class programInfo():
             self.last_error = "Cannot not determine user folder!"
             return False
 
-        # set data paths
+        # set data paths (normalized)
         #
-        self.path_userdata = os.path.join(self.path_home, "data")
+        if self.osindex == 0:
+            self.path_userdata = os.path.normcase(self.path_home).replace("\\", "/") + "/data"
+        else:
+            self.path_userdata = os.path.join(self.path_home, "data")
 
         # add own system path for windows
         #
@@ -727,6 +747,8 @@ class programInfo():
         for path in [self.path_userdata, self.path_sysdata]:
             test = os.path.join(path, *[name for name in names])
             # print ("Test: " +  test)
+            if self.osindex == 0:
+                test = os.path.normcase(test).replace("\\", "/")
             if os.path.isfile(test):
                 return test
         self.last_error = "/".join([name for name in names]) + " not found"
@@ -962,7 +984,7 @@ class programInfo():
         rows, match = self.fileCache.listCacheMatch()
         for row in rows:
             tags = (match[row[1]] if row[1] in match else row[7]).split("|")
-            data.append(cacheRepoEntry(row[0], row[1], row[2], row[3], row[4], row[5], row[6], tags))
+            data.append(cacheRepoEntry(self.env, row[0], row[1], row[2], row[3], row[4], row[5], row[6], tags))
         return data
 
     def getAvailableBases(self):
@@ -1036,7 +1058,7 @@ class programInfo():
                     thumbfile = defaultthumb
                 name = f[:-4]
                 uuid = ftype + "_" + name
-                asset = cacheRepoEntry(name, uuid, obj_path, ftype, None, thumbfile, "User", tags)
+                asset = cacheRepoEntry(self.env, name, uuid, obj_path, ftype, None, thumbfile, "User", tags)
                 found_assets.append(asset)
         cache_ref.extend(found_assets)
 

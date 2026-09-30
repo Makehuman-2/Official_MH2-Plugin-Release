@@ -117,6 +117,8 @@ class object3d:
         use a relative path to object
         """
         if pathname is not None and self.material is not None:
+            if self.env.osindex == 0:
+                pathname = os.path.normcase(pathname).replace("\\", "/")
             return self.material.loadMatFile(pathname)
         else:
             return True
@@ -125,6 +127,8 @@ class object3d:
         if self.material is not None:
              self.material.freeTextures()
         self.initMaterial()
+        if self.env.osindex == 0:
+            pathname = os.path.normcase(pathname).replace("\\", "/")
         return self.material.loadMatFile(pathname)
 
     def getMaterialFilename(self):

@@ -499,7 +499,7 @@ class baseClass():
 
     def getAttachedByFilename(self, filename):
         if self.env.osindex == 0:
-            fname = filename.lower()
+            fname = filename.lower().replace("\\", "/")
             for elem in self.attachedAssets:
                 if elem.filename.lower() == fname:
                     return elem

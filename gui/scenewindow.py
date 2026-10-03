@@ -43,6 +43,9 @@ class MHSceneWindow(QWidget):
         self._lastselectedfloor = self.scene.floortexname
         self._lastfloorsize = self.scene.floorsize.copy()
 
+        self.skyboxlist = {}    # will hold skyboxes
+        self.floorlist = {}     # will hold floors
+
         # will keep the light widgets
         #
         self.lightsetup = [
@@ -130,17 +133,21 @@ class MHSceneWindow(QWidget):
         self.skybox.clicked.connect(self.setSkybox)
         vlayout.addWidget(self.skybox)
 
-        self.skyboxlist = self.env.getDataDirList(None, "shaders", "skybox")
         self.skyboxSelect = QListWidget()
         self.skyboxSelect.setFixedSize(240, 100)
-        self.skyboxSelect.addItems(self.skyboxlist.keys())
         self.skyboxSelect.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.scanSkyboxFolder()
         self.getSkyBoxName()
 
         vlayout.addWidget(self.skyboxSelect)
         b = QPushButton("Select")
         b.setEnabled(not self.env.noskybox)
         b.clicked.connect(self.changeSkyboxName)
+        vlayout.addWidget(b)
+
+        b = QPushButton("Rescan")
+        b.setEnabled(not self.env.noskybox)
+        b.clicked.connect(self.scanSkyboxFolder)
         vlayout.addWidget(b)
 
         l.setLayout(vlayout)
@@ -163,16 +170,19 @@ class MHSceneWindow(QWidget):
         vlayout.addWidget(self.floorThickness )
 
         vlayout.addWidget(QLabel("Floor texture:"))
-        self.floorlist = self.env.getDataFileList("png", "shaders", "floor")
-        self.floorlist.update(self.env.getDataFileList("jpg", "shaders", "floor"))
         self.floorSelect = QListWidget()
-        self.floorSelect.addItems(self.floorlist.keys())
         self.floorSelect.setSelectionMode(QAbstractItemView.SingleSelection)
         self.getFloorName()
+        self.scanFloorFolder()
         vlayout.addWidget(self.floorSelect)
 
         b = QPushButton("Select")
         b.clicked.connect(self.changeFloorName)
+        vlayout.addWidget(b)
+
+        b = QPushButton("Rescan")
+        b.setEnabled(not self.env.noskybox)
+        b.clicked.connect(self.scanFloorFolder)
         vlayout.addWidget(b)
 
         l.setLayout(vlayout)
@@ -297,10 +307,41 @@ class MHSceneWindow(QWidget):
         if len(items) > 0:
             self.skyboxSelect.setCurrentItem(items[0])
 
+    def scanSkyboxFolder(self):
+        self.skyboxlist = self.env.getDataDirList(None, "shaders", "skybox")
+        self.skyboxSelect.clear()
+        self.skyboxSelect.addItems(sorted(list(self.skyboxlist.keys())))
+
     def getFloorName(self):
         items = self.floorSelect.findItems(self._lastselectedfloor, Qt.MatchExactly)
         if len(items) > 0:
             self.floorSelect.setCurrentItem(items[0])
+
+    def scanFloorFolder(self):
+        self.floorlist = self.env.getDataFileList("png", "shaders", "floor")
+        self.floorlist.update(self.env.getDataFileList("jpg", "shaders", "floor"))
+        self.floorSelect.clear()
+        self.floorSelect.addItems(sorted(list(self.floorlist.keys())))
+
+    def reset_call(self):
+        self.light.fromGlobal(False)
+        self.changeSkybox(self._lastusedskybox, self._lastselectedskybox)
+        self.scene.setFloorSize(self._lastfloorsize[0], self._lastfloorsize[1])
+        self.getValues()
+        self.view.Tweak()
+
+    def default_call(self):
+        oldname = self.light.skyboxname
+        self.light.fromGlobal(True)
+        self.changeSkybox(self.light.skyboxname, oldname)
+        self.getValues()
+        self.view.Tweak()
+
+    def use_call(self):
+        self.light.toGlobal()
+        self._lastusedskybox = self.light.skyboxname
+        self.close()
+
 
     def getValues(self):
         if self.light.blinn:

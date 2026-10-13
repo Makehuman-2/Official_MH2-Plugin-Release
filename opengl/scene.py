@@ -53,8 +53,8 @@ class Scene():
         self.white = self.sysmaterials[1].uniColor([1.0, 1.0, 1.0])
         self.orange= self.sysmaterials[2].uniColor([1.0, 0.5, 0.0])
         self.red   = self.sysmaterials[3].uniColor([1.0, 0.5, 0.5])
-        self.blue  = self.sysmaterials[3].uniColor([0.5, 0.5, 1.0])
-        self.normal= self.sysmaterials[4].uniColor([0.5, 0.5, 1.0])
+        self.blue  = self.sysmaterials[4].uniColor([0.5, 0.5, 1.0])
+        self.normal= self.sysmaterials[5].uniColor([0.5, 0.5, 1.0])
 
         # and floor texture
         self.floorTexture(self.floortexname)
@@ -129,6 +129,11 @@ class Scene():
                 self.togglePrims("xzgrid", True)
             self.update()
 
+    def getFloorSizeFloat(self):
+        if self.glob.baseClass is not None:
+            return 10.0
+        return self.floorsize[0]
+
     def setFloorSize(self, sq=0.0, d=0.0):
         """
         sets the size of the floor
@@ -159,8 +164,11 @@ class Scene():
         :param str name: name of the texture in shaders folder
         """
         floorpath = self.env.existDataFile("shaders", "floor", name)
-        self.floortex = self.sysmaterials[5].setDiffuse(floorpath, self.red, None )
+        self.floortex = self.sysmaterials[6].setDiffuse(floorpath, self.red, None )
         self.floortexname = name
+
+    def getFloorTexture(self):
+        return self.floortexname
 
     def modFloorTexture(self, name):
         """

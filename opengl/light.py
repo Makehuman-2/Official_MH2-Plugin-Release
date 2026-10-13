@@ -38,7 +38,10 @@ class Light():
                 { "pos": QVector3D(), "vol": QVector3D(), "int": 0.0, "type": 0 },
                 ]
         self.fromGlobal(False)
-    
+
+    def numLights(self):
+        return len(self.lights)
+
     def listTo3D(self, v, elems):
         v.setX(elems[0])
         v.setY(elems[1])
@@ -112,6 +115,9 @@ class Light():
     def useSkyBox(self, value):
         self.skybox = value
 
+    def getAmbientLuminance(self):
+        return float(self.ambientLight.w())
+
     def setAmbientLuminance(self, value):
         self.ambientLight.setW(value)
         self.setShader()
@@ -124,11 +130,17 @@ class Light():
         self.lightWeight.setY(value)
         self.setShader()
 
+    def getClearColor(self):
+        return [round(self.glclearcolor.x(), 4), round(self.glclearcolor.y(), 4), round(self.glclearcolor.z(), 4)]
+
     def setClearColor(self, value):
         self.glclearcolor.setX(value.redF())
         self.glclearcolor.setY(value.greenF())
         self.glclearcolor.setZ(value.blueF())
         self.glclearcolor.setW(1.0)
+
+    def getAmbientColor(self):
+        return [round(self.ambientLight.x(), 4), round(self.ambientLight.y(), 4), round(self.ambientLight.z(), 4)]
 
     def setAmbientColor(self, value):
         self.ambientLight.setX(value.redF())
@@ -147,13 +159,23 @@ class Light():
         m.setZ(z)
         self.setShader()
 
+    def getLPos(self, num):
+        m =  self.lights[num]["pos"]
+        return [round(m.x(), 4), round(m.y(), 4), round(m.z(), 4)]
+
     def setType(self, num, ltype):
         self.lights[num]["type"] = ltype
         self.setShader()
 
+    def getType(self, num):
+        return self.lights[num]["type"]
+
     def setLLuminance(self, num, value):
         self.lights[num]["int"] = value
         self.setShader()
+
+    def getLLuminance(self, num):
+        return float(self.lights[num]["int"])
 
     def setLColor(self, num, value):
         m =  self.lights[num]["vol"]
@@ -162,3 +184,6 @@ class Light():
         m.setZ(value.blueF())
         self.setShader()
 
+    def getLColor(self, num):
+        m =  self.lights[num]["vol"]
+        return [round(m.x(), 4), round(m.y(), 4), round(m.z(), 4)]

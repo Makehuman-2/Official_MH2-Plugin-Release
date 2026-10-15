@@ -130,7 +130,7 @@ class Scene():
             self.update()
 
     def getFloorSizeFloat(self):
-        if self.glob.baseClass is not None:
+        if self.glob.baseClass is None:
             return 10.0
         return self.floorsize[0]
 

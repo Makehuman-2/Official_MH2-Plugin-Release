@@ -120,7 +120,8 @@ class MHSelectAssetWindow(QWidget):
         right_vlayout.addWidget(assetgb)
 
         action_layout = QHBoxLayout()
-        self.dbutton = QPushButton("Download")
+        self.dbutton = QPushButton("Single Download")
+        self.dbutton.setToolTip("Load only the selected asset, not the cart.")
         self.dbutton.clicked.connect(self.download_call)
         action_layout.addWidget(self.dbutton)
 
@@ -674,11 +675,9 @@ class MHSelectAssetWindow(QWidget):
         self.populate_favorites_sidebar()
 
     def add_shortcut_to_cart(self, asset_name):
-        if hasattr(self.parent, 'download_cart') and asset_name not in self.parent.download_cart:
-            self.parent.download_cart.append(asset_name)
-            self.activateDownload()
-            self.update_cart_time_estimate()
-            self.sync_parent_cart_labels()
+        self.parent.add_to_cart(asset_name)
+        self.activateDownload()
+        self.update_cart_time_estimate()
 
     def download_call(self):
         if self.current_asset is not None:
@@ -694,30 +693,15 @@ class MHSelectAssetWindow(QWidget):
 
     def add_selected_to_cart_call(self):
         if self.current_asset is not None:
-            assetname = self.current_asset
-            if hasattr(self.parent, 'download_cart'):
-                if assetname not in self.parent.download_cart:
-                    self.parent.download_cart.append(assetname)
-        self.sync_parent_cart_labels()
+            self.parent.add_to_cart(self.current_asset)
         self.activateDownload()
 
     def remove_selected_from_cart_call(self):
-        if self.current_asset is not None and hasattr(self.parent, 'download_cart'):
-            if self.current_asset in self.parent.download_cart:
-                self.parent.download_cart.remove(self.current_asset)
-                self.sync_parent_cart_labels()
+        if self.current_asset is not None:
+            self.parent.remove_from_cart(self.current_asset)
             self.activateDownload()
 
     def clear_entire_cart_call(self):
-        if hasattr(self.parent, 'download_cart'):
-            self.parent.download_cart.clear()
-            self.sync_parent_cart_labels()
+        self.parent.clear_cart()
         self.activateDownload()
 
-    def sync_parent_cart_labels(self):
-        cart_len = len(getattr(self.parent, 'download_cart', []))
-        if hasattr(self.parent, 'masterCartLabel') and self.parent.masterCartLabel:
-            self.parent.masterCartLabel.setText(f"Items waiting in queue: {cart_len}")
-        if hasattr(self.parent, 'checkoutBtn') and self.parent.checkoutBtn:
-            self.parent.checkoutBtn.setText(f"Download All ({cart_len} Items)")
-            self.parent.checkoutBtn.setEnabled(cart_len > 0)

@@ -152,14 +152,15 @@ class DownLoadImport(QVBoxLayout):
         # ----------------------------------------------------
         checkout_panel = QGroupBox("Batch Asset Cart")
         checkout_panel.setObjectName("subwindow")
-        panel_layout = QHBoxLayout(checkout_panel)
+        panel_layout = QVBoxLayout(checkout_panel)
 
         self.masterCartLabel = QLabel("Cart is empty")
         panel_layout.addWidget(self.masterCartLabel)
 
         # Configures text string space
-        self.checkoutBtn = QPushButton("Download All Items")
+        self.checkoutBtn = QPushButton()
         self.checkoutBtn.setDisabled(True) 
+        self.sync_cart_labels()
         
         # Pulls the icon from icon/cart.png
         icon_path = os.path.join(self.env.path_sysicon, "cart.png")
@@ -747,30 +748,29 @@ class DownLoadImport(QVBoxLayout):
         self.bckproc = worker
         return worker
 
-    def add_to_cart_clicked(self):
-        button = self.sender()
-        assetname = button.property("asset_name")
-        if assetname in self.download_cart:
-            return
-        self.download_cart.append(assetname)
-        button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
-        button.setEnabled(False)
-        self.update_cart_time_estimate()
+    def add_to_cart(self, asset):
+        if asset not in self.download_cart:
+            self.download_cart.append(asset)
+        self.sync_cart_labels()
 
-    def update_cart_time_estimate(self):
-        """Keeps the master button label calculation accurate on the primary panel window."""
+    def remove_from_cart(self, asset):
+        if asset in self.download_cart:
+            self.download_cart.remove(asset)
+            self.sync_cart_labels()
+
+    def clear_cart(self):
+        self.download_cart.clear()
+        self.sync_cart_labels()
+
+    def sync_cart_labels(self):
         cart_len = len(self.download_cart)
-        if cart_len == 0:
-            self.masterCartLabel.setText("Cart is empty")
-            self.checkoutBtn.setDisabled(True)
-            return
-            
-        self.checkoutBtn.setEnabled(True)
-        # Display the real item quantity waiting in memory
         self.masterCartLabel.setText(f"Items waiting in queue: {cart_len}")
+        self.checkoutBtn.setText(f"Download All ({cart_len} Items)")
+        self.checkoutBtn.setEnabled(cart_len > 0)
 
     def on_checkout_clicked(self):
-        if not self.download_cart: return
+        if not self.download_cart:
+            return
         self.checkoutBtn.setEnabled(False)
         self.masterCartLabel.setText("Downloading parallel queue...")
         self.cart_processing = True
@@ -810,8 +810,8 @@ class DownLoadImport(QVBoxLayout):
         if not still_running:
             self.cart_processing = False
             self.download_cart.clear()
+            self.sync_cart_labels()
             self.masterCartLabel.setText("All items downloaded successfully! Cart empty.")
-            self.checkoutBtn.setEnabled(False)
             
             # ONE SINGLE COMPLETION PROMPT BOX
             QMessageBox.information(self.parent, "Done!", "All assets in your cart have been downloaded successfully!")

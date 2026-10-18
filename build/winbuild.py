@@ -289,8 +289,9 @@ class winBuilder():
             if self.isWindows:
                 subprocess.call(["python3", "./compile_meshes.py", "-b", mesh, "-f", filename], cwd="..")
             else:
-                subprocess.call(["./compile_meshes.py", "-b", mesh, "-f", filename], cwd="..")
+                subprocess.call(["python3", "./compile_meshes.py", "-b", mesh, "-f", filename], cwd="..")
         except Exception as e:
+            print(e)
             self.cleanexit (20, "compile_meshes " + mesh + " " + filename + " failed!")
 
     def compileAssets(self):
@@ -334,8 +335,9 @@ class winBuilder():
             if self.isWindows:
                 subprocess.call(["python3", "./compile_targets.py", "-f", filename], cwd="..")
             else:
-                subprocess.call(["./compile_targets.py", "-f", filename], cwd="..")
+                subprocess.call(["python3", "./compile_targets.py", "-f", filename], cwd="..")
         except Exception as e:
+            print(e)
             self.cleanexit (20, "compile_target " + filename + " failed!")
 
     def compileTargets(self):

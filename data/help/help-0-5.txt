@@ -48,6 +48,12 @@ Redisplay is only needed, if the asset list itself was downloaded again after th
 <p>
 Finally there is the "Download" button to install the selected asset and a "Close" button.
 
+<h2>Download using batch asset cart</h2>
+<p>
+One can select a number of assets and put them into a cart with button <img src="data/icons/cart.png" width=32 style="background-color: #f0f0f0; vertical-align: middle;">.
+It is also possible to empty the cart or mark favorites. Download of the complete content of the cart is done in main menu.
+
+
 <h2>Download an asset pack</h2>
 <p>
 We also provide the possibility to download complete asset packs or to unzip and install already downloaded packs.

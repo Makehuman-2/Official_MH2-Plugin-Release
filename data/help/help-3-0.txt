@@ -62,6 +62,14 @@ however will replace the old one.</i>
 <tr><td><img src="data/icons/sweep.png"></td><td>Reset all filters, all items are shown on right side.</td></tr>
 </table>
 <p>
+<h3>Skeleton reduction:</h3>
+<p>
+In case of a skeleton with more than one bone group, like the fantasy skeleton, the bones can be reduced to the bones needed.
+Press the button <img src="data/icons/minus.png" style="background-color: #f0f0f0; vertical-align: middle;"> to reduce the skeleton.
+Only complete groups can be deleted, standard groups cannot be deleted (e.g. legs for mermaids will stay). MakeHuman II tests, if a bone group is not used at all for
+weighting, if so, the group is deleted.
+<p>
+
 <h3>Icons, right side:</h3>
 <p>
 <table style="background-color:#c0c0c0;color:#000000;border:2;vertical-align:middle;">

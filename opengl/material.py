@@ -269,16 +269,28 @@ class Material:
         path = self.env.formatPath(path)
         fobjdir = self.env.formatPath(self.mhmatdir)
 
+        # in case of windows, normalize name before comparison
+        #
+        if self.env.osindex == 0:
+            path = os.path.normcase(path).replace("\\","/")
+            fobjdir = os.path.normcase(fobjdir).replace("\\","/")
+
         if path.startswith(fobjdir):
             relpath = path[len(fobjdir)+1:]
             return relpath
 
         test = self.env.formatPath(self.env.stdSysPath(self.type))
+        if self.env.osindex == 0:
+            test = os.path.normcase(test).replace("\\","/")
+
         rest = None
         if fobjdir.startswith(test):
             rest = fobjdir[len(test)+1:]
         
         test = self.env.formatPath(self.env.stdUserPath(self.type))
+        if self.env.osindex == 0:
+            test = os.path.normcase(test).replace("\\","/")
+
         if fobjdir.startswith(test):
             rest = fobjdir[len(test)+1:]
 

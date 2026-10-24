@@ -253,6 +253,12 @@ class MHMaterialEditor(QWidget):
         hlayout.addWidget(self.namebox)
         layout.addLayout(hlayout)
 
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(QLabel("Material description:"))
+        self.descbox = QLineEdit(self.material.description)
+        hlayout.addWidget(self.descbox)
+        layout.addLayout(hlayout)
+
         self.loadMatButton = QPushButton("Import / Choose .mhmat File...")
         self.loadMatButton.setObjectName("colnum1")
         self.loadMatButton.clicked.connect(self.chooseMaterialFile)
@@ -431,6 +437,7 @@ class MHMaterialEditor(QWidget):
         self.object = obj
         self.material = obj.material
         self.namebox.setText(self.material.name)
+        self.descbox.setText(self.material.description)
 
         self.setShader()
 
@@ -582,6 +589,7 @@ class MHMaterialEditor(QWidget):
         filename = freq.request()
         if filename is not None:
             self.material.name = self.namebox.text()
+            self.material.description = self.descbox.text()
             self.material.saveMatFile(filename)
             QMessageBox.information(self.parent.central_widget, "Done!", "Material saved as " + filename)
 

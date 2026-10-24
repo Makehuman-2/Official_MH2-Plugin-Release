@@ -1,13 +1,9 @@
 [project]
 name = "mh2_official_tools"
 version = "2.0.0"
-dependencies = ["PySide6"]
+dependencies = ["PySide6", "send2trash"]
 
 [project.entry-points."makehuman2.plugins"]
-prop_panel = "mh2_official_tools.prop_panel:initialize_extension"
-# THE SYSTEM ALIGNMENT CURE
-# This registers your studios directly into your custom official entry points loop!
-# 
-make_outfit = "mh2_official_tools.make_outfit:load_extension/unload_extension"
-#
-# or make_outfit = "mh2_official_tools.make_outfit" (since load_extension and unload_extension) are defaults when not supplied
+make_outfit = "mh2_official_tools.make_outfit"
+camera_controls = "mh2_official_tools.camera_controls"
+mh2_asset_purge = "mh2_official_tools.mh2_asset_purge"

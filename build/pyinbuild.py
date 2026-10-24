@@ -21,6 +21,9 @@ class pyInstall():
         self.verbose= verbose
         self.keepsource= keepsource
         self.pyinstdir = None
+        self.addpyinstdirs = []
+        self.internalfiles = []
+        self.extraimport = []
         self.pyname = "python3" if pyname is None else pyname
         self.reponame = None
         self.name = None
@@ -90,9 +93,13 @@ class pyInstall():
         if self.verbose:
             print ("+ evaluate " + self.conf)
 
-        if "pyinstdir" not in json_object:
-            self.cleanexit(3, "Missing 'pyinstdir' in " + self.conf)
-        self.pyinstdir = os.path.join(self.tmp, json_object["pyinstdir"])
+        if "pyinstaller" not in json_object:
+            self.cleanexit(3, "Missing 'pyinstaller' in " + self.conf)
+
+        pyinst = json_object["pyinstaller"]
+        if "dir" not in pyinst:
+            self.cleanexit(3, "Missing 'pyinstaller / dir' in " + self.conf)
+        self.pyinstdir = os.path.join(self.tmp, pyinst["dir"])
 
         self.removeOldFolder()
         if "reponame" not in json_object:
@@ -104,8 +111,17 @@ class pyInstall():
         if "ignoredirs" in json_object:
             self.ignoredirs = json_object["ignoredirs"]
 
-        if "ignorepyinstdirs" in json_object:
-            self.ignorepyinstdirs = json_object["ignorepyinstdirs"]
+        if "ignoredirs" in pyinst:
+            self.ignorepyinstdirs = pyinst["ignoredirs"]
+
+        if "adddirs" in pyinst:
+            self.addpyinstdirs = pyinst["adddirs"]
+
+        if "internalfiles" in pyinst:
+            self.internalfiles = pyinst["internalfiles"]
+
+        if "import" in pyinst:
+            self.extraimport = pyinst["import"]
 
         if "ignorefiles" in json_object:
             self.ignorefiles = json_object["ignorefiles"]
@@ -154,7 +170,36 @@ class pyInstall():
                     if elem.endswith(".py"):
                         self.copyfile(os.path.join(root, elem), os.path.join(destdir, elem))
 
-             
+    def copyAsSource(self):
+        fromdir = ".."
+
+        destdir = os.path.join(self.distdir, "_internal")
+        for fname in self.internalfiles:
+            self.copyfile(os.path.join(fromdir, fname), os.path.join(destdir, fname))
+
+        for folder in self.addpyinstdirs:
+            source = os.path.join(fromdir, folder)
+            dest = os.path.join(self.distdir, folder)
+            l = len(source)
+            self.mkdir(dest)
+            for root, dirs, files in os.walk(source, topdown=True):
+                if root.startswith(source):
+                    destdir = os.path.join(dest, root[l+1:])
+
+                for elem in dirs:
+                    dontcreate = False
+                    for pat in self.ignorepyinstdirs:
+                        if re.match(pat, elem):
+                            dontcreate = True
+
+                    if not dontcreate:
+                        if os.path.isdir(destdir):
+                            self.mkdir(os.path.join(destdir, elem))
+
+                if os.path.isdir(destdir):
+                    for elem in files:
+                        self.copyfile(os.path.join(root, elem), os.path.join(destdir, elem))
+
     def copyRepo(self, additional):
         sourcedirs = []
         sourcedirs.append(os.path.join("..", "data"))
@@ -274,11 +319,24 @@ class pyInstall():
                     os.rmdir(path)
 
     def pyinstCall(self, newname):
+
+        extraimport = []
+        for elem in self.extraimport:
+            extraimport.extend(["--hidden-import", elem])
+
         if self.isWindows:
-            pars = [self.pyname, "-m", "PyInstaller", "--noconsole", "makehuman.py"]
+            # onedir is default anyway, dist is cleared
+            pars = [self.pyname, "-m", "PyInstaller", "--onedir", "--noconsole"]
+            if len(extraimport) > 0:
+                pars.extend(extraimport)
+            pars.append("makehuman.py")
             oldname = os.path.join(self.distdir, "makehuman.exe")
         else:
-            pars = ["pyinstaller", "makehuman.py"]
+            # noconsole non existent
+            pars = ["pyinstaller", "--onedir"]
+            if len(extraimport) > 0:
+                pars.extend(extraimport)
+            pars.append("makehuman.py")
             oldname = os.path.join(self.distdir, "makehuman")
 
         if self.verbose:
@@ -314,6 +372,7 @@ if __name__ == '__main__':
     wb.evaluateCfg()
     wb.copyProg()
     wb.pyinstCall(args.name)
+    wb.copyAsSource()
     wb.copyRepo(args.data)
     wb.compileTargets()
     wb.removeASCIITargets()

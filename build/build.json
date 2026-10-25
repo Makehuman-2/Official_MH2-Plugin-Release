@@ -7,7 +7,8 @@
 		"python3-pyside6.qtopengl",
 		"python3-pyside6.qtopenglwidgets",
 		"python3-numpy",
-		"python3-psutil"
+		"python3-psutil",
+		"python3-send2trash"
 	],
 	"ppa-control-desc": "../data/help/help-description.txt",
 	"ppa-replaces": null,

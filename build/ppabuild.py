@@ -420,7 +420,7 @@ Categories=Graphics"""
         if self.verbose:
             print ("+ calling compile_meshes.py " + mesh + " " + filename)
         try:
-            subprocess.call(["./compile_meshes.py", "-b", mesh, "-f", filename], cwd="..")
+            subprocess.call(["python3", "./compile_meshes.py", "-b", mesh, "-f", filename], cwd="..")
         except Exception as e:
             self.cleanexit (20, "compile_meshes " + mesh + " " + filename + " failed!")
 
@@ -462,7 +462,7 @@ Categories=Graphics"""
         if self.verbose:
             print ("+ calling compile_targets.py " + filename)
         try:
-            subprocess.call(["./compile_targets.py", "-f", filename], cwd="..")
+            subprocess.call(["python3", "./compile_targets.py", "-f", filename], cwd="..")
         except Exception as e:
             self.cleanexit (20, "compile_target " + filename + " failed!")
 

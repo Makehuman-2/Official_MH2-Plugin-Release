@@ -409,7 +409,7 @@ backfaceCull {self.backfaceCull}
         for (root, dirs, files) in  os.walk(objdir):
             for name in files:
                 if name.endswith(".mhmat"):
-                    mlist.append(os.path.join(root, name))
+                    mlist.append(os.path.join(root, name).replace("\\", "/"))
                     found = True
 
         # second way is a parallel materials folder for common materials
@@ -419,7 +419,7 @@ backfaceCull {self.backfaceCull}
             for (root, dirs, files) in  os.walk(objdir):
                 for name in files:
                     if name.endswith(".mhmat"):
-                        mlist.append(os.path.join(root, name))
+                        mlist.append(os.path.join(root, name).replace("\\", "/"))
         return mlist
 
     def listAllMaterials(self, objdir = None):
@@ -427,39 +427,45 @@ backfaceCull {self.backfaceCull}
             objdir = self.mhmatdir
 
         materialfiles=[]
-        materialfiles = self._getMaterialList(objdir, materialfiles)
 
-        # eyes can be special, when no extra mesh is in user section
-        # if we already found materials and these are in system folder
-        # check user folder as well
+        # eyes are special, here both sections needs to be tested
+        # no matter, where the eye meshes are
+        #
         if self.type == "eyes":
-            sysstart = self.env.stdSysPath()
-            if len(materialfiles) > 0:
-                if materialfiles[0].startswith(sysstart):
-                    path = os.path.join(self.env.stdUserPath(self.type))
-                    materialfiles = self._getMaterialList(path, materialfiles)
 
-                    # create a set from the names and keep duplicates
-                    #
-                    names = set()
-                    double = []
-                    for item in materialfiles:
-                        b = os.path.basename(item)
-                        if b in names:
-                            double.append(b)
-                        else:
-                            names.add(b)
+            # easier way for eyes, simply collect in both paths, independently from mesh
+            #
+            userpath = self.env.fullPath(self.env.stdUserPath(self.type))
+            syspath = self.env.fullPath(self.env.stdSysPath(self.type))
+            materialfiles = self._getMaterialList(userpath, materialfiles)
+            materialfiles = self._getMaterialList(syspath, materialfiles)
 
-                    # and delete duplicates with system
-                    # collect these and delete them
-                    rem = []
-                    if len(double) > 0:
-                        for item in materialfiles:
-                            b = os.path.basename(item)
-                            if item.startswith(sysstart) and b in double:
-                                rem.append(item)
-                    for item in rem:
-                        materialfiles.remove(item)
+            # create a set from the names and collect duplicates
+            #
+            names = set()
+            double = []
+            for item in materialfiles:
+                b = os.path.basename(item)
+                if b in names:
+                    double.append(b)
+                else:
+                    names.add(b)
+
+            # delete duplicates with system
+            # collect these and delete them
+            #
+            rem = []
+            if len(double) > 0:
+                for item in materialfiles:
+                    b = os.path.basename(item)
+                    if item.startswith(syspath) and b in double:
+                        rem.append(item)
+            for item in rem:
+                materialfiles.remove(item)
+        else:
+            # normal method
+            #
+            materialfiles = self._getMaterialList(objdir, materialfiles)
         return materialfiles
 
     def colorate(self):
